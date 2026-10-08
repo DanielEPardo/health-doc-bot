@@ -1,4 +1,4 @@
-import type { Clerk } from '@clerk/clerk-js';
+import type { BrowserClerk as Clerk } from '@clerk/clerk-react';
 import { esES } from '@clerk/localizations';
 
 let clerkPromise: Promise<Clerk> | undefined;
