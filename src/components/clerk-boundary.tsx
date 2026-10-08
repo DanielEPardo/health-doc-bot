@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from '@tanstack/react-router';
 import type { Clerk } from '@clerk/clerk-js';
 import { loadClerk } from '@/lib/clerk-browser';
+import { ClerkReadyContext } from '@/lib/clerk-ready';
 
 export default function ClerkBoundary({ publishableKey, children }: { publishableKey: string; children: ReactNode }) {
   const [clerk, setClerk] = useState<Clerk | null>(null);
@@ -30,5 +31,5 @@ export default function ClerkBoundary({ publishableKey, children }: { publishabl
     return () => { active = false; unsubscribe?.(); };
   }, [publishableKey, router]);
   if (!clerk) return <>{children}{failed && <p role="alert" className="content-width text-muted-foreground">No pudimos conectar el ingreso. Intenta nuevamente en unos minutos.</p>}</>;
-  return <ClerkProvider Clerk={clerk} publishableKey={publishableKey} localization={esES} signInUrl="/sign-in" signUpUrl="/sign-up" signInForceRedirectUrl="/revision" signUpForceRedirectUrl="/revision" routerPush={to => { void router.navigate({ href: to }); }} routerReplace={to => { void router.navigate({ href: to, replace: true }); }} appearance={{ variables: { fontFamily: 'DM Sans, Arial, sans-serif', fontSize: '18px', borderRadius: '8px' }, elements: { card: 'clerk-card', headerTitle: 'clerk-text', formFieldLabel: 'clerk-text', formFieldInput: 'clerk-input', formButtonPrimary: 'clerk-button', socialButtonsBlockButton: 'clerk-input', footerActionText: 'clerk-text', footerActionLink: 'text-link' } }}>{children}</ClerkProvider>;
+  return <ClerkProvider Clerk={clerk} publishableKey={publishableKey} localization={esES} signInUrl="/sign-in" signUpUrl="/sign-up" signInForceRedirectUrl="/revision" signUpForceRedirectUrl="/revision" routerPush={to => { void router.navigate({ href: to }); }} routerReplace={to => { void router.navigate({ href: to, replace: true }); }} appearance={{ variables: { fontFamily: 'DM Sans, Arial, sans-serif', fontSize: '18px', borderRadius: '8px' }, elements: { card: 'clerk-card', headerTitle: 'clerk-text', formFieldLabel: 'clerk-text', formFieldInput: 'clerk-input', formButtonPrimary: 'clerk-button', socialButtonsBlockButton: 'clerk-input', footerActionText: 'clerk-text', footerActionLink: 'text-link' } }}><ClerkReadyContext.Provider value={true}>{children}</ClerkReadyContext.Provider></ClerkProvider>;
 }

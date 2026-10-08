@@ -8,3 +8,9 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Use Clerk as the only owner of visitor authentication; Cloud serves configuration but does not own these sessions.
+- Load one browser Clerk instance and reuse it in the provider and /revision beforeLoad guard; this prevents initial-session races.
+- /revision contains only a WhatsApp handoff, not private server data; any future private server handler must independently verify a Clerk token.
+- Keep the landing as one scrolling public route, with separate account and data-policy routes, because the requested experience is explicitly one page without navigation.
+- Define visual roles and reusable presentation rules in src/styles.css and use design-system controls for actions.
