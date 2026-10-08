@@ -1,4 +1,4 @@
-# Tutela clara
+# TuTelaGanas
 - [x] Crear landing accesible en español con las ocho secciones.
 - [x] Integrar Clerk en español y proteger /revision sin sesión.
 - [x] Añadir política de datos y contacto.
