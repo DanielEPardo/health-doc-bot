@@ -11,7 +11,17 @@ const description = 'Envía tu tutela ya redactada por WhatsApp para recibir una
 export const Route = createFileRoute('/revision')({
   ssr: false,
   beforeLoad: async () => {
-    const { publishableKey } = await getClerkConfig();
+    // The dev/publish server can briefly refuse the client RPC (e.g. during a
+    // reload). Retry once, then fail closed to /sign-in instead of crashing.
+    let publishableKey = '';
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        ({ publishableKey } = await getClerkConfig());
+        break;
+      } catch {
+        if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 700));
+      }
+    }
     const clerk = await loadClerk(publishableKey).catch(() => null);
     if (revisionDestination(Boolean(clerk?.session)) === '/sign-in') throw redirect({ to: '/sign-in', replace: true });
   },
