@@ -4,7 +4,7 @@ import { ReviewCTA } from '@/components/review-cta';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import hero from '@/assets/tutela-hero.jpg';
 
-const title = 'Tutela clara — Revisa tu tutela de salud antes de presentarla';
+const title = 'TuTelaGanas — Revisa tu tutela de salud antes de presentarla';
 const description = 'Revisión orientativa por WhatsApp para identificar qué le falta a tu tutela de salud contra una EPS en Colombia.';
 export const Route = createFileRoute('/')({ head: () => ({ meta: [{ title }, { name: 'description', content: description }, { property: 'og:title', content: title }, { property: 'og:description', content: description }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary_large_image' }] }), component: Index });
 

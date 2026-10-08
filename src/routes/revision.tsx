@@ -6,7 +6,7 @@ import { loadClerk } from '@/lib/clerk-browser';
 import { revisionDestination, whatsappUrl } from '@/lib/revision-access';
 import { useClerkReady } from '@/lib/clerk-ready';
 import { Button } from '@/components/ui/button';
-const title = 'Tu revisión — Tutela clara';
+const title = 'Tu revisión — TuTelaGanas';
 const description = 'Envía tu tutela ya redactada por WhatsApp para recibir una revisión orientativa.';
 export const Route = createFileRoute('/revision')({
   ssr: false,
