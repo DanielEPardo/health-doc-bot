@@ -8,7 +8,12 @@ import {
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, lazy, Suspense, type ReactNode } from "react";
+import { ClientOnly } from '@tanstack/react-router';
+import { getClerkConfig } from '@/lib/clerk.functions';
+import { Brand } from '@/components/brand';
+
+const ClerkBoundary = lazy(() => import('@/components/clerk-boundary'));
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -74,25 +79,21 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  loader: () => getClerkConfig(),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap' },
     ],
   }),
   shellComponent: RootShell,
@@ -103,7 +104,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="es-CO">
       <head>
         <HeadContent />
       </head>
@@ -117,11 +118,12 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { publishableKey } = Route.useLoaderData();
+  const content = <><header className="site-header"><div className="content-width"><Brand /></div></header><Outlet /><footer className="footer"><div className="content-width footer-inner"><Brand /><a href="mailto:tuetelaclara@gmail.com">tuetelaclara@gmail.com</a><Link to="/politica-de-datos" className="text-link">Política de tratamiento de datos</Link></div></footer></>;
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      {publishableKey ? <ClientOnly fallback={content}><Suspense fallback={content}><ClerkBoundary publishableKey={publishableKey}>{content}</ClerkBoundary></Suspense></ClientOnly> : content}
     </QueryClientProvider>
   );
 }
