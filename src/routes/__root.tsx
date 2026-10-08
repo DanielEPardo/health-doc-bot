@@ -119,7 +119,9 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const { publishableKey } = Route.useLoaderData();
-  const content = <><header className="site-header"><div className="content-width"><Brand /></div></header><Outlet /><footer className="footer"><div className="content-width footer-inner"><Brand /><a href="mailto:tuetelaclara@gmail.com">tuetelaclara@gmail.com</a><Link to="/politica-de-datos" className="text-link">Política de tratamiento de datos</Link></div></footer></>;
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const showHeaderCTA = !['/revision', '/sign-in', '/sign-up'].includes(pathname);
+  const content = <><header className="site-header"><div className="content-width header-inner"><Brand />{showHeaderCTA && <span className="header-cta"><ReviewCTA /></span>}</div></header><Outlet /><footer className="footer"><div className="content-width footer-inner"><Brand /><a href="mailto:tuetelaclara@gmail.com">tuetelaclara@gmail.com</a><Link to="/politica-de-datos" className="text-link">Política de tratamiento de datos</Link></div></footer></>;
 
   return (
     <QueryClientProvider client={queryClient}>
