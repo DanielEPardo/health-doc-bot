@@ -231,7 +231,10 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
 @media (max-width:767px) {
  .content-width { width:calc(100% - 40px); }
  .site-header { height:76px; }
- .brand { font-size:25px; }
+ .brand { font-size:20px; }
+ .brand-mark { width:30px; height:33px; }
+ .header-cta .review-button { min-height:44px; padding:8px 14px; font-size:18px; }
+ .header-cta .review-button svg { display:none; }
  .hero { min-height:650px; align-items:flex-start; }
  .hero-photo { object-position:70% center; opacity:0.18; }
  .hero::after { background:var(--hero-wash); opacity:0.64; }

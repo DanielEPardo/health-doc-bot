@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
@@ -12,6 +13,7 @@ import { useEffect, lazy, Suspense, type ReactNode } from "react";
 import { ClientOnly } from '@tanstack/react-router';
 import { getClerkConfig } from '@/lib/clerk.functions';
 import { Brand } from '@/components/brand';
+import { ReviewCTA } from '@/components/review-cta';
 
 const ClerkBoundary = lazy(() => import('@/components/clerk-boundary'));
 
