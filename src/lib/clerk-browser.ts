@@ -1,4 +1,4 @@
-import type { Clerk } from '@clerk/shared/types';
+import type { Clerk } from '@clerk/clerk-js';
 import { esES } from '@clerk/localizations';
 
 let clerkPromise: Promise<Clerk> | undefined;
