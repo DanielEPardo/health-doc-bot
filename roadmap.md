@@ -1,6 +1,6 @@
 # Tutela clara
-- [ ] Crear landing accesible en español con las ocho secciones.
-- [ ] Integrar Clerk en español y proteger /revision.
-- [ ] Añadir política de datos y contacto.
-- [ ] Verificar página, preguntas frecuentes y acceso en celular y escritorio.
-- [ ] Verificar SMS y Google en la instancia de Clerk (requiere configuración externa y una sesión real).
+- [x] Crear landing accesible en español con las ocho secciones.
+- [x] Integrar Clerk en español y proteger /revision sin sesión.
+- [x] Añadir política de datos y contacto.
+- [x] Verificar página, preguntas frecuentes y acceso en celular y escritorio.
+- [ ] Activar y verificar registro SMS y Google, acceso con sesión y cierre de sesión (bloqueado: la clave guardada no tiene el formato pk_test_ o pk_live_ de Clerk; se necesita la clave pública correcta y una sesión real).

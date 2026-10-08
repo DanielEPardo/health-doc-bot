@@ -2,7 +2,7 @@ import { ClerkProvider } from '@clerk/clerk-react';
 import { esES } from '@clerk/localizations';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from '@tanstack/react-router';
-import type { Clerk } from '@clerk/clerk-js';
+import type { Clerk } from '@clerk/shared/types';
 import { loadClerk } from '@/lib/clerk-browser';
 import { ClerkReadyContext } from '@/lib/clerk-ready';
 
