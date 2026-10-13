@@ -15,6 +15,7 @@ import { Route as RevisionRouteImport } from './routes/revision'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as ApiWhatsappRouteImport } from './routes/api/whatsapp'
+import { Route as ApiPublicTwilioWhatsappRouteImport } from './routes/api/public/twilio/whatsapp'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const ApiWhatsappRoute = ApiWhatsappRouteImport.update({
   path: '/api/whatsapp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTwilioWhatsappRoute = ApiPublicTwilioWhatsappRouteImport.update({
+  id: '/api/public/twilio/whatsapp',
+  path: '/api/public/twilio/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
+  '/api/public/twilio/whatsapp': typeof ApiPublicTwilioWhatsappRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
+  '/api/public/twilio/whatsapp': typeof ApiPublicTwilioWhatsappRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,6 +79,7 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
+  '/api/public/twilio/whatsapp': typeof ApiPublicTwilioWhatsappRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,6 +90,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/api/whatsapp'
+    | '/api/public/twilio/whatsapp'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/api/whatsapp'
+    | '/api/public/twilio/whatsapp'
   id:
     | '__root__'
     | '/'
@@ -97,6 +108,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/api/whatsapp'
+    | '/api/public/twilio/whatsapp'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,6 +118,7 @@ export interface RootRouteChildren {
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
   ApiWhatsappRoute: typeof ApiWhatsappRoute
+  ApiPublicTwilioWhatsappRoute: typeof ApiPublicTwilioWhatsappRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -152,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWhatsappRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/twilio/whatsapp': {
+      id: '/api/public/twilio/whatsapp'
+      path: '/api/public/twilio/whatsapp'
+      fullPath: '/api/public/twilio/whatsapp'
+      preLoaderRoute: typeof ApiPublicTwilioWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -162,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
   ApiWhatsappRoute: ApiWhatsappRoute,
+  ApiPublicTwilioWhatsappRoute: ApiPublicTwilioWhatsappRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -155,7 +155,7 @@ const URL_POLITICA = "https://health-doc-bot.lovable.app/politica-de-datos";
 
 export const TEXTOS = {
   autorizacion: (url: string, ia: ProveedorIA | null = null) =>
-    `👋 Hola, soy el asistente de *TuTelaGanas*.\n\nRevisaré si tu tutela de salud tiene los requisitos del *Decreto 2591 de 1991* y la jurisprudencia de la *Corte Constitucional*. Es una revisión *orientativa*: no reemplaza a un abogado ni garantiza el resultado.\n\n🔒 *Autorización de datos sensibles (Ley 1581 de 2012)*\nTu tutela contiene datos de salud, que son *sensibles*. No estás obligado(a) a autorizar su tratamiento. Si autorizas, usaremos el texto *solo* para esta revisión (lo procesa WhatsApp/Meta como encargado), lo borraremos al terminar y guardaremos únicamente el resultado sin tus datos personales.${
+    `👋 Hola, soy el asistente de *TuTelaGanas*.\n\nRevisaré si tu tutela de salud tiene los requisitos del *Decreto 2591 de 1991* y la jurisprudencia de la *Corte Constitucional*. Es una revisión *orientativa*: no reemplaza a un abogado ni garantiza el resultado.\n\n🔒 *Autorización de datos sensibles (Ley 1581 de 2012)*\nTu tutela contiene datos de salud, que son *sensibles*. No estás obligado(a) a autorizar su tratamiento. Si autorizas, usaremos el texto *solo* para esta revisión (lo procesan WhatsApp/Meta y Twilio como encargados), lo borraremos al terminar y guardaremos únicamente el resultado sin tus datos personales.${
       ia === "gemini"
         ? "\n\n🤖 *Análisis con IA:* para leer mejor tu tutela enviamos el texto, *sin tu nombre, cédula, teléfono, correo ni dirección*, al servicio gratuito *Google Gemini*. Google puede usar ese texto para mejorar sus productos y personas de Google pueden leerlo."
         : ia === "anthropic"
