@@ -10,7 +10,7 @@ export const TWILIO_SANDBOX = { numero: '14155238886', codigoUnion: '' };
 export function construirWhatsappUrl(sandbox = TWILIO_SANDBOX): string {
   return sandbox.codigoUnion
     ? `https://wa.me/${sandbox.numero}?text=${encodeURIComponent(sandbox.codigoUnion)}`
-    : 'https://wa.me/573106907908?text=Hola,%20quiero%20revisar%20mi%20tutela.';
+    : 'https://wa.me/573108553543?text=Hola,%20quiero%20revisar%20mi%20tutela.';
 }
 export const whatsappUrl = construirWhatsappUrl();
 /**
