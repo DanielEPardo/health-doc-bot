@@ -6,7 +6,7 @@ import hero from '@/assets/tutela-hero.jpg';
 import { REVISION_WEB_HABILITADA } from '@/lib/revision-access';
 
 const title = 'TuTelaGanas — Revisa tu tutela de salud antes de presentarla';
-const description = 'Revisión orientativa por WhatsApp para identificar qué le falta a tu tutela de salud contra una EPS en Colombia.';
+const description = 'Revisión orientativa de tu tutela de salud por WhatsApp o en el revisor de esta página, para saber qué le falta antes de presentarla.';
 export const Route = createFileRoute('/')({ head: () => ({ meta: [{ title }, { name: 'description', content: description }, { property: 'og:title', content: title }, { property: 'og:description', content: description }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary_large_image' }] }), component: Index });
 
 const checks = [
@@ -19,6 +19,7 @@ const checks = [
 const faqs = [
   ['¿Cuesta algo?', 'Sí, la revisión tiene un costo. Te informaremos el valor antes de comenzar para que decidas si quieres continuar.'],
   ['¿Por qué debo crear una cuenta?', 'Para identificar tu revisión y mantener tu información protegida. Solo te pedimos tu celular o tu cuenta de Google.'],
+  ['¿Puedo revisarla sin usar WhatsApp?', 'Sí. Además del chat de WhatsApp, en esta página tienes un revisor: pegas el texto de tu tutela y ves al instante qué cumple y qué falta.'],
   ['¿Quién ve mi información?', 'Solo usamos tu celular o correo para identificar tu cuenta, y el texto de tu tutela únicamente para hacer la revisión. No lo compartimos con terceros.'],
   ['¿Sirve si todavía no he escrito mi tutela?', 'No. Necesitas tener una tutela ya redactada, aunque sea un borrador. Revisamos ese texto y te indicamos qué puedes corregir.'],
   ['¿Reemplaza a un abogado?', 'No. Es una revisión orientativa de requisitos. Si tu caso es complejo, te recomendamos consultar a un abogado.'],
@@ -31,7 +32,7 @@ function Index() {
       <div className="content-width hero-content"><div className="hero-copy">
         <p className="eyebrow"><ShieldCheck size={20} aria-hidden="true" /> Tu derecho a la salud, con más claridad</p>
         <h1 id="hero-title">Antes de presentar tu tutela, revisa que no le falte nada</h1>
-        <p className="hero-description">{REVISION_WEB_HABILITADA ? 'Pega tu tutela en la página o envíanosla por WhatsApp' : 'Envíanos tu tutela por WhatsApp'} y te decimos qué puntos le faltan o están débiles, para que los corrijas antes de entregarla al juzgado.</p>
+        <p className="hero-description">{REVISION_WEB_HABILITADA ? 'Envía tu tutela por WhatsApp o pégala en el revisor de esta página.' : 'Envíanos tu tutela por WhatsApp.'} Te decimos qué puntos le faltan o están débiles, para que los corrijas antes de entregarla al juzgado.</p>
         <ReviewCTA />
         <p className="cta-note">Crea tu cuenta en un minuto. Es una revisión orientativa, no reemplaza a un abogado.</p>
       </div></div>
@@ -43,7 +44,7 @@ function Index() {
     <section className="section"><div className="content-width">
       <div className="centered"><p className="section-kicker">Sencillo, paso a paso</p><h2>Cómo funciona</h2></div>
       <div className="steps">
-        {[{ icon: Smartphone, title: 'Crea tu cuenta', text: 'Con tu celular o Google, en menos de un minuto.' }, REVISION_WEB_HABILITADA ? { icon: MessageCircle, title: 'Envía tu tutela', text: 'Pégala en la página para una revisión inmediata, o envíala por WhatsApp desde tu cuenta.' } : { icon: MessageCircle, title: 'Escríbenos por WhatsApp', text: 'Desde tu cuenta, abre el chat con un clic y envía el texto de tu tutela.' }, { icon: FileCheck2, title: 'Recibe la revisión', text: 'Te indicamos qué puntos cumple, cuáles no y qué corregir.' }].map((step, i) => <div className="step" key={step.title}><div className="step-icon"><step.icon size={28} strokeWidth={1.7} aria-hidden="true" /></div><p className="step-number">Paso {i + 1}</p><h3>{step.title}</h3><p>{step.text}</p></div>)}
+        {[{ icon: Smartphone, title: 'Crea tu cuenta', text: 'Con tu celular o Google, en menos de un minuto.' }, REVISION_WEB_HABILITADA ? { icon: MessageCircle, title: 'Envía tu tutela', text: 'Como te sea más fácil: por WhatsApp o pegándola en el revisor de esta página.' } : { icon: MessageCircle, title: 'Escríbenos por WhatsApp', text: 'Desde tu cuenta, abre el chat con un clic y envía el texto de tu tutela.' }, { icon: FileCheck2, title: 'Recibe la revisión', text: 'Te indicamos qué puntos cumple, cuáles no y qué corregir.' }].map((step, i) => <div className="step" key={step.title}><div className="step-icon"><step.icon size={28} strokeWidth={1.7} aria-hidden="true" /></div><p className="step-number">Paso {i + 1}</p><h3>{step.title}</h3><p>{step.text}</p></div>)}
       </div><div className="steps-action"><ReviewCTA /></div>
     </div></section>
     <section className="section review-section"><div className="content-width review-layout">
