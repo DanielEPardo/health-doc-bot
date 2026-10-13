@@ -8,7 +8,7 @@ import { RevisionWeb } from '@/components/revision-web';
 import { useClerkReady } from '@/lib/clerk-ready';
 import { Button } from '@/components/ui/button';
 const title = 'Tu revisión — TuTelaGanas';
-const description = 'Envía tu tutela ya redactada por WhatsApp para recibir una revisión orientativa.';
+const description = 'Envía tu tutela por WhatsApp o pégala en el revisor de esta página para recibir una revisión orientativa.';
 export const Route = createFileRoute('/revision')({
   ssr: false,
   beforeLoad: async () => {
@@ -36,5 +36,5 @@ function SessionActions() {
 }
 function Revision() {
   const ready = useClerkReady();
-  return <main className="auth-page"><p className="section-kicker">Un paso más para tener claridad</p><h1>Revisemos tu tutela</h1><p>Ten a mano tu tutela ya redactada. Te indicaremos qué puntos cumple y qué puedes corregir.</p><ol className="revision-steps"><li><span>1.</span> Abre nuestro chat de WhatsApp.</li><li><span>2.</span> Envía el texto de tu tutela y el celular o correo de tu cuenta para identificar tu revisión.</li><li><span>3.</span> Te informaremos el costo antes de comenzar. Luego recibirás los puntos que necesitas revisar.</li></ol><Button asChild variant="review"><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle aria-hidden="true" /> Abrir WhatsApp</a></Button><p className="cta-note">No envíes historias clínicas ni documentos de salud que no sean necesarios para la revisión.</p>{REVISION_WEB_HABILITADA && <RevisionWeb />}{ready && <div className="mt-8"><SessionActions /></div>}</main>;
+  return <main className="auth-page"><p className="section-kicker">Un paso más para tener claridad</p><h1>Revisemos tu tutela</h1><p>Ten a mano tu tutela ya redactada. Puedes enviarla por WhatsApp o pegarla en el revisor de esta página.</p><ol className="revision-steps"><li><span>1.</span> Elige cómo enviarla: por WhatsApp o en el revisor de esta página.</li><li><span>2.</span> Por WhatsApp: abre el chat, envía el texto de tu tutela y el celular o correo de tu cuenta. Te informamos el costo antes de comenzar.</li><li><span>3.</span> En el revisor: pega el texto más abajo y te mostramos al instante qué cumple y qué falta.</li></ol><Button asChild variant="review"><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle aria-hidden="true" /> Abrir WhatsApp</a></Button><p className="cta-note">No envíes historias clínicas ni documentos de salud que no sean necesarios para la revisión.</p>{REVISION_WEB_HABILITADA && <RevisionWeb />}{ready && <div className="mt-8"><SessionActions /></div>}</main>;
 }
