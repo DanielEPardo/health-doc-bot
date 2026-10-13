@@ -14,7 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      consentimientos: {
+        Row: {
+          aceptado_en: string
+          id: number
+          telefono: string
+          texto_autorizacion: string
+        }
+        Insert: {
+          aceptado_en?: string
+          id?: never
+          telefono: string
+          texto_autorizacion: string
+        }
+        Update: {
+          aceptado_en?: string
+          id?: never
+          telefono?: string
+          texto_autorizacion?: string
+        }
+        Relationships: []
+      }
+      conversaciones: {
+        Row: {
+          actualizado: string
+          buffer: string
+          estado: string
+          telefono: string
+        }
+        Insert: {
+          actualizado?: string
+          buffer?: string
+          estado: string
+          telefono: string
+        }
+        Update: {
+          actualizado?: string
+          buffer?: string
+          estado?: string
+          telefono?: string
+        }
+        Relationships: []
+      }
+      mensajes_procesados: {
+        Row: {
+          id_mensaje: string
+          recibido_en: string
+        }
+        Insert: {
+          id_mensaje: string
+          recibido_en?: string
+        }
+        Update: {
+          id_mensaje?: string
+          recibido_en?: string
+        }
+        Relationships: []
+      }
+      revisiones: {
+        Row: {
+          creado_en: string
+          id: number
+          resumen: Json
+          telefono: string
+        }
+        Insert: {
+          creado_en?: string
+          id?: never
+          resumen: Json
+          telefono: string
+        }
+        Update: {
+          creado_en?: string
+          id?: never
+          resumen?: Json
+          telefono?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
