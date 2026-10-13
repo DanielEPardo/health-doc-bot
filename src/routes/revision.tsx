@@ -3,7 +3,8 @@ import { useClerk } from '@clerk/clerk-react';
 import { MessageCircle, LogOut } from 'lucide-react';
 import { getClerkConfig } from '@/lib/clerk.functions';
 import { loadClerk } from '@/lib/clerk-browser';
-import { revisionDestination, whatsappUrl } from '@/lib/revision-access';
+import { REVISION_WEB_HABILITADA, revisionDestination, whatsappUrl } from '@/lib/revision-access';
+import { RevisionWeb } from '@/components/revision-web';
 import { useClerkReady } from '@/lib/clerk-ready';
 import { Button } from '@/components/ui/button';
 const title = 'Tu revisión — TuTelaGanas';
@@ -35,5 +36,5 @@ function SessionActions() {
 }
 function Revision() {
   const ready = useClerkReady();
-  return <main className="auth-page"><p className="section-kicker">Un paso más para tener claridad</p><h1>Revisemos tu tutela</h1><p>Ten a mano tu tutela ya redactada. Te indicaremos qué puntos cumple y qué puedes corregir.</p><ol className="revision-steps"><li><span>1.</span> Abre nuestro chat de WhatsApp.</li><li><span>2.</span> Envía el texto de tu tutela y el celular o correo de tu cuenta para identificar tu revisión.</li><li><span>3.</span> Te informaremos el costo antes de comenzar. Luego recibirás los puntos que necesitas revisar.</li></ol><Button asChild variant="review"><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle aria-hidden="true" /> Abrir WhatsApp</a></Button><p className="cta-note">No envíes historias clínicas ni documentos de salud que no sean necesarios para la revisión.</p>{ready && <div className="mt-8"><SessionActions /></div>}</main>;
+  return <main className="auth-page"><p className="section-kicker">Un paso más para tener claridad</p><h1>Revisemos tu tutela</h1><p>Ten a mano tu tutela ya redactada. Te indicaremos qué puntos cumple y qué puedes corregir.</p><ol className="revision-steps"><li><span>1.</span> Abre nuestro chat de WhatsApp.</li><li><span>2.</span> Envía el texto de tu tutela y el celular o correo de tu cuenta para identificar tu revisión.</li><li><span>3.</span> Te informaremos el costo antes de comenzar. Luego recibirás los puntos que necesitas revisar.</li></ol><Button asChild variant="review"><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><MessageCircle aria-hidden="true" /> Abrir WhatsApp</a></Button><p className="cta-note">No envíes historias clínicas ni documentos de salud que no sean necesarios para la revisión.</p>{REVISION_WEB_HABILITADA && <RevisionWeb />}{ready && <div className="mt-8"><SessionActions /></div>}</main>;
 }

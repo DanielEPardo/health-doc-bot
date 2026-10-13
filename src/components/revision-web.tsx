@@ -1,0 +1,497 @@
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  ClipboardCopy,
+  FileSearch,
+  HelpCircle,
+  Info,
+  Loader2,
+  RotateCcw,
+  Sparkles,
+  Search,
+  XCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  LONGITUD_MAXIMA,
+  LONGITUD_MINIMA,
+  validarTexto,
+  type Dictamen,
+  type Estado,
+  type ResultadoRegla,
+} from "@/lib/validador";
+import { getEstadoIA, revisarConIA, type ResultadoPublico } from "@/lib/revision-ia.functions";
+
+type ClerkGlobal = { Clerk?: { session?: { getToken: () => Promise<string | null> } | null } };
+
+/*
+ * Revisión en la web. Diseño guiado por las 10 heurísticas de Nielsen
+ * (ver docs/usabilidad/evaluacion-heuristica-nielsen.md). Las referencias "H#" marcan cada decisión.
+ * El validador corre en el navegador: el texto no se envía ni se guarda (ni siquiera en localStorage).
+ */
+
+const TITULO: Record<Dictamen, string> = {
+  lista_para_presentar: "Tu tutela tiene los elementos principales",
+  requiere_ajustes: "Tu tutela necesita algunos ajustes",
+  incompleta: "A tu tutela le faltan elementos esenciales",
+};
+const SIGUIENTE_PASO: Record<Dictamen, string> = {
+  lista_para_presentar:
+    "Revisa las notas de abajo y, si quieres, envíala por WhatsApp para una segunda revisión antes de radicarla.",
+  requiere_ajustes: "Corrige los puntos marcados, pega de nuevo el texto y vuelve a revisarla.",
+  incompleta:
+    "Empieza por los puntos de «Lo que debes corregir primero»: sin ellos el juez puede pedirte corregirla o rechazarla.",
+};
+const ETIQUETA: Record<Estado, string> = {
+  cumple: "Cumple",
+  debil: "Por mejorar",
+  no_cumple: "Falta",
+  revisar: "Revisar",
+  no_aplica: "No aplica",
+};
+const ORDEN = { critico: 0, importante: 1, recomendacion: 2 } as const;
+
+/** H2 — Títulos en lenguaje cotidiano; el término jurídico queda entre paréntesis. */
+const TITULO_SIMPLE: Record<string, string> = {
+  F01: "¿Quién presenta la tutela?",
+  F02: "¿Dónde vives y cómo te avisa el juzgado?",
+  F03: "¿Contra qué entidad es la tutela?",
+  F04: "¿Qué pasó? (los hechos)",
+  F05: "¿Qué derecho te están vulnerando?",
+  F06: "¿Qué le pides al juez? (pretensiones)",
+  F07: "Juramento de que no presentaste otra tutela igual",
+  F08: "Firma y datos al final",
+  L01: "¿Puedes presentarla tú o en nombre de otra persona? (legitimación)",
+  L02: "¿La tutela va contra quien debe darte el servicio?",
+  P01: "¿La presentas a tiempo? (inmediatez)",
+  P02: "¿Por qué la tutela y no otro trámite? (subsidiariedad)",
+  P03: "¿Pides una medida urgente? (medida provisional)",
+  P04: "¿Ya presentaste otra tutela por lo mismo? (temeridad)",
+  P05: "¿El servicio sigue pendiente? (hecho superado)",
+  S01: "Orden del médico tratante",
+  S02: "¿Qué hizo o dejó de hacer la EPS?",
+  S03: "Diagnóstico",
+  S04: "¿Qué servicio de salud necesitas?",
+  S05: "Tratamiento integral",
+  S06: "Personas con protección especial",
+  S07: "Servicios que la EPS dice que no cubre (fuera del PBS)",
+  S08: "Transporte, pañales, cuidador o enfermería",
+  S09: "Si la EPS no responde tus solicitudes (derecho de petición)",
+  A01: "Pruebas y documentos que adjuntas",
+  C01: "¿A qué juez la diriges?",
+};
+const titulo = (r: ResultadoRegla) => TITULO_SIMPLE[r.reglaId] ?? r.titulo;
+
+/** H10 — Ayuda breve: partes mínimas de una tutela (Decreto 2591 de 1991, art. 14 y 37). */
+const PARTES_TUTELA = [
+  "Juez al que va dirigida y entidad accionada (tu EPS).",
+  "Tus datos: nombre, cédula, ciudad donde vives.",
+  "Hechos numerados con fechas: diagnóstico, orden médica, qué pediste a la EPS y qué respondió.",
+  "Derechos vulnerados: salud, vida digna, seguridad social…",
+  "Pretensiones: qué debe ordenar el juez, a quién y en qué plazo.",
+  "Pruebas y anexos: cédula, orden médica, negación de la EPS.",
+  "Juramento de no haber presentado otra tutela por lo mismo.",
+  "Notificaciones (dirección, correo, celular) y tu firma.",
+];
+
+function IconoEstado({ estado }: { estado: Estado }) {
+  if (estado === "cumple")
+    return <CheckCircle2 aria-hidden="true" className="estado-icono estado-cumple" />;
+  if (estado === "no_cumple")
+    return <XCircle aria-hidden="true" className="estado-icono estado-falta" />;
+  if (estado === "revisar")
+    return <Search aria-hidden="true" className="estado-icono estado-revisar" />;
+  return <AlertTriangle aria-hidden="true" className="estado-icono estado-debil" />;
+}
+
+function Regla({ r }: { r: ResultadoRegla }) {
+  return (
+    <AccordionItem value={r.reglaId}>
+      <AccordionTrigger className="regla-trigger">
+        <span className="regla-titulo">
+          <IconoEstado estado={r.estado} />
+          <span>{titulo(r)}</span>
+          <span className={`regla-etiqueta etiqueta-${r.estado}`}>{ETIQUETA[r.estado]}</span>
+        </span>
+      </AccordionTrigger>
+      <AccordionContent className="regla-contenido">
+        {r.recomendacion && <p className="regla-recomendacion">{r.recomendacion}</p>}
+        <p className="regla-hallazgo">Lo que encontramos: {r.hallazgo}</p>
+        <p className="regla-fundamento-titulo">Fundamento</p>
+        <ul className="regla-fundamento">
+          {r.fuentes.map((f) => (
+            <li key={f.id}>
+              <a className="text-link" href={f.url} target="_blank" rel="noopener noreferrer">
+                {f.cita}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
+function Grupo({
+  titulo: t,
+  reglas,
+  abiertas = false,
+}: {
+  titulo: string;
+  reglas: ResultadoRegla[];
+  abiertas?: boolean;
+}) {
+  if (reglas.length === 0) return null;
+  return (
+    <section className="resultado-grupo">
+      <h3>{t}</h3>
+      <Accordion type="multiple" defaultValue={abiertas ? reglas.map((r) => r.reglaId) : []}>
+        {reglas.map((r) => (
+          <Regla key={r.reglaId} r={r} />
+        ))}
+      </Accordion>
+    </section>
+  );
+}
+
+/** H6 — Lista de correcciones en texto plano para copiar y tenerla a mano mientras se edita. */
+function listaCorrecciones(res: ResultadoPublico): string {
+  const pendientes = res.resultados
+    .filter((r) => r.estado === "no_cumple" || r.estado === "debil" || r.estado === "revisar")
+    .sort((a, b) => ORDEN[a.severidad] - ORDEN[b.severidad]);
+  return [
+    `Revisión TuTelaGanas — ${TITULO[res.dictamen]} (${res.puntaje}/100)`,
+    "",
+    ...pendientes.map(
+      (r, i) =>
+        `${i + 1}. ${titulo(r)} [${ETIQUETA[r.estado]}]\n   ${r.recomendacion || r.hallazgo}\n   Fundamento: ${r.fuentes.map((f) => f.cita).join("; ")}`,
+    ),
+    "",
+    res.descargo,
+  ].join("\n");
+}
+
+function Resultado({ res, desactualizado }: { res: ResultadoPublico; desactualizado: boolean }) {
+  const [copiado, setCopiado] = useState(false);
+  const pendientes = res.resultados
+    .filter((r) => r.estado === "no_cumple" || r.estado === "debil" || r.estado === "revisar")
+    .sort((a, b) => ORDEN[a.severidad] - ORDEN[b.severidad]);
+  const criticos = pendientes.filter((r) => r.severidad === "critico");
+  const otros = pendientes.filter((r) => r.severidad !== "critico");
+  const cumplidos = res.resultados.filter((r) => r.estado === "cumple");
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(listaCorrecciones(res));
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2500);
+    } catch {
+      setCopiado(false);
+    }
+  };
+  return (
+    <div className={`resultado resultado-${res.dictamen}`}>
+      {desactualizado && (
+        <p className="resultado-desactualizado" role="status">
+          <Info aria-hidden="true" /> Cambiaste el texto: este resultado corresponde a la versión
+          anterior. Vuelve a revisar para actualizarlo.
+        </p>
+      )}
+      <div className="resultado-encabezado">
+        <h2>{TITULO[res.dictamen]}</h2>
+        <p className="resultado-origen">
+          {res.modeloIA ? (
+            <>
+              <Sparkles aria-hidden="true" /> Analizado con IA ({res.modeloIA}) y las reglas del
+              Decreto 2591
+            </>
+          ) : (
+            <>Revisado en tu navegador con las reglas del Decreto 2591</>
+          )}
+        </p>
+        <p className="resultado-resumen">
+          <strong>{criticos.length}</strong> por corregir primero · <strong>{otros.length}</strong>{" "}
+          para fortalecer · <strong>{cumplidos.length}</strong> ya están bien
+        </p>
+        <div
+          className="resultado-puntaje"
+          aria-label={`Qué tan completa está tu tutela: ${res.puntaje} de 100`}
+        >
+          <div className="resultado-barra">
+            <span style={{ width: `${res.puntaje}%` }} />
+          </div>
+          <span>{res.puntaje}/100</span>
+        </div>
+        <p className="resultado-nota">
+          El puntaje mide qué tan completa está tu tutela, no la probabilidad de ganarla.
+        </p>
+        <p className="resultado-siguiente">
+          <strong>Siguiente paso:</strong> {SIGUIENTE_PASO[res.dictamen]}
+        </p>
+        {pendientes.length > 0 && (
+          <Button variant="outline" size="sm" onClick={copiar} className="resultado-copiar">
+            {copiado ? <Check aria-hidden="true" /> : <ClipboardCopy aria-hidden="true" />}{" "}
+            {copiado ? "Lista copiada" : "Copiar lista de correcciones"}
+          </Button>
+        )}
+      </div>
+      <Grupo titulo="Lo que debes corregir primero" reglas={criticos} abiertas />
+      <Grupo titulo="Para fortalecer tu tutela" reglas={otros} />
+      {cumplidos.length > 0 && (
+        <Accordion type="single" collapsible className="resultado-cumplidos">
+          <AccordionItem value="cumplidos">
+            <AccordionTrigger className="regla-trigger">
+              Ver los {cumplidos.length} puntos que ya están bien
+            </AccordionTrigger>
+            <AccordionContent>
+              <Accordion type="multiple">
+                {cumplidos.map((r) => (
+                  <Regla key={r.reglaId} r={r} />
+                ))}
+              </Accordion>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      )}
+      <p className="resultado-descargo">
+        <Info aria-hidden="true" /> {res.descargo}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Revisión en la web: corre el validador en el navegador del usuario.
+ * El texto de la tutela no se envía a ningún servidor ni se guarda.
+ */
+export function RevisionWeb() {
+  const [texto, setTexto] = useState("");
+  const [res, setRes] = useState<ResultadoPublico | null>(null);
+  const [textoRevisado, setTextoRevisado] = useState("");
+  const [aviso, setAviso] = useState("");
+  const [borrado, setBorrado] = useState<{ texto: string; res: ResultadoPublico | null } | null>(
+    null,
+  );
+  const [iaDisponible, setIaDisponible] = useState(false);
+  const [usarIA, setUsarIA] = useState(false);
+  const [cargando, setCargando] = useState(false);
+  const [avisoIA, setAvisoIA] = useState("");
+  const resultadoRef = useRef<HTMLDivElement>(null);
+  const idTexto = useId();
+  const idAyuda = useId();
+
+  // ¿El servidor tiene IA configurada? Si no, la opción ni se muestra (H8).
+  useEffect(() => {
+    let activo = true;
+    getEstadoIA()
+      .then((e) => activo && setIaDisponible(Boolean(e.proveedor)))
+      .catch(() => activo && setIaDisponible(false));
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  // H3 — el "deshacer" desaparece solo después de un rato.
+  useEffect(() => {
+    if (!borrado) return;
+    const t = setTimeout(() => setBorrado(null), 10_000);
+    return () => clearTimeout(t);
+  }, [borrado]);
+
+  const revisar = async () => {
+    if (cargando) return;
+    const limpio = texto.trim();
+    // H9 — mensajes que dicen qué pasó y cómo resolverlo.
+    if (limpio.length === 0) {
+      setAviso(
+        "Aún no has pegado tu tutela. Copia el texto completo (desde «Señor Juez» hasta tu firma) y pégalo arriba.",
+      );
+      return;
+    }
+    if (limpio.length < LONGITUD_MINIMA) {
+      setAviso(
+        `Tu texto tiene ${limpio.length} caracteres y una tutela suele tener más de ${LONGITUD_MINIMA}. Revisa que hayas pegado el escrito completo.`,
+      );
+      return;
+    }
+    if (limpio.length > LONGITUD_MAXIMA) {
+      setAviso(
+        "El texto es demasiado largo. Pega solo el escrito de la tutela, sin anexos ni historia clínica.",
+      );
+      return;
+    }
+    setAviso("");
+    setAvisoIA("");
+    const textoEnviado = texto;
+    if (usarIA && iaDisponible) {
+      setCargando(true);
+      try {
+        const token = await (window as unknown as ClerkGlobal).Clerk?.session?.getToken();
+        const r = await revisarConIA({
+          data: { texto: limpio, autorizaIA: true },
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        setRes(r);
+      } catch (err) {
+        // H9 — si la IA falla, el usuario igual recibe su revisión y sabe por qué cambió.
+        setRes(validarTexto(limpio));
+        const motivo = (
+          err instanceof Error && err.message ? err.message : "error de conexión"
+        ).replace(/\.$/, "");
+        setAvisoIA(
+          `No pudimos usar la IA (${motivo}). Te mostramos la revisión hecha en tu navegador.`,
+        );
+      } finally {
+        setCargando(false);
+      }
+    } else {
+      setRes(validarTexto(limpio));
+    }
+    setTextoRevisado(textoEnviado);
+    requestAnimationFrame(() => resultadoRef.current?.focus());
+  };
+
+  const borrar = () => {
+    setBorrado({ texto, res });
+    setTexto("");
+    setRes(null);
+    setAviso("");
+  };
+
+  // H7 — atajo para usuarios frecuentes: Ctrl/⌘ + Enter revisa.
+  const alTeclear = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      void revisar();
+    }
+  };
+
+  const contador = texto.trim().length;
+  return (
+    <section className="revision-web" aria-labelledby={`${idTexto}-titulo`}>
+      <FileSearch aria-hidden="true" className="revision-web-icono" />
+      <h2 id={`${idTexto}-titulo`}>O revísala aquí mismo</h2>
+      <p className="revision-web-intro">
+        Pega el texto de tu tutela y te mostramos al instante qué cumple y qué falta. La revisión se
+        hace en tu navegador: el texto no se envía ni se guarda.
+      </p>
+
+      <details className="revision-web-guia">
+        <summary>
+          <HelpCircle aria-hidden="true" /> ¿Qué partes debe tener una tutela?
+        </summary>
+        <ol>
+          {PARTES_TUTELA.map((p) => (
+            <li key={p}>{p}</li>
+          ))}
+        </ol>
+        <p>
+          ¿Aún no la tienes escrita? La Defensoría del Pueblo y la Personería de tu municipio ayudan
+          gratis a redactarla.
+        </p>
+      </details>
+
+      <label htmlFor={idTexto} className="revision-web-label">
+        Texto de tu tutela
+      </label>
+      <Textarea
+        id={idTexto}
+        aria-describedby={idAyuda}
+        aria-invalid={aviso ? true : undefined}
+        className="revision-web-texto"
+        placeholder="Señor Juez… Yo, [nombre], identificado(a) con cédula… HECHOS… PRETENSIONES…"
+        value={texto}
+        onChange={(e) => {
+          setTexto(e.target.value);
+          if (aviso) setAviso("");
+        }}
+        onKeyDown={alTeclear}
+        maxLength={LONGITUD_MAXIMA}
+      />
+      <p id={idAyuda} className="revision-web-ayuda">
+        {contador.toLocaleString("es-CO")} caracteres
+        {contador > 0 && contador < LONGITUD_MINIMA ? ` (mínimo ${LONGITUD_MINIMA})` : ""} · No
+        incluyas historias clínicas completas · Atajo: Ctrl/⌘ + Enter
+      </p>
+      {aviso && (
+        <p role="alert" className="revision-web-aviso">
+          {aviso}
+        </p>
+      )}
+      {iaDisponible && (
+        <div className="revision-web-ia">
+          <label className="revision-web-ia-opcion">
+            <input type="checkbox" checked={usarIA} onChange={(e) => setUsarIA(e.target.checked)} />
+            <span>
+              <Sparkles aria-hidden="true" /> Usar análisis con IA (Google Gemini) para leer mejor
+              mi tutela
+            </span>
+          </label>
+          {/* Consentimiento informado (Ley 1581): qué se envía, a quién y con qué riesgo. */}
+          <p className="revision-web-ia-detalle">
+            Si lo marcas, enviamos tu tutela{" "}
+            <strong>sin nombre, cédula, teléfono, correo ni dirección</strong> al servicio gratuito
+            de Google Gemini. Google puede usar ese texto para mejorar sus productos y personas de
+            Google pueden leerlo. No lo guardamos. Si no lo marcas, la revisión se hace solo en tu
+            navegador.
+          </p>
+        </div>
+      )}
+      {cargando && (
+        <p className="revision-web-cargando" role="status">
+          <Loader2 aria-hidden="true" className="animate-spin" /> Analizando con IA… Si el modelo
+          más reciente está ocupado, probamos automáticamente con el siguiente. Puede tardar unos
+          segundos.
+        </p>
+      )}
+      {avisoIA && (
+        <p role="status" className="revision-web-aviso-ia">
+          {avisoIA}
+        </p>
+      )}
+      <div className="revision-web-acciones">
+        <Button
+          variant="review"
+          onClick={() => void revisar()}
+          disabled={cargando}
+          aria-busy={cargando}
+        >
+          {cargando ? (
+            <Loader2 aria-hidden="true" className="animate-spin" />
+          ) : (
+            <Search aria-hidden="true" />
+          )}{" "}
+          {cargando ? "Analizando con IA…" : res ? "Revisar de nuevo" : "Revisar ahora"}
+        </Button>
+        {(texto || res) && (
+          <Button variant="ghost" onClick={borrar}>
+            Borrar texto
+          </Button>
+        )}
+        {borrado && !texto && (
+          <Button
+            variant="outline"
+            onClick={() => {
+              setTexto(borrado.texto);
+              setRes(borrado.res);
+              setBorrado(null);
+            }}
+          >
+            <RotateCcw aria-hidden="true" /> Deshacer borrado
+          </Button>
+        )}
+      </div>
+      <div ref={resultadoRef} tabIndex={-1} aria-live="polite" className="revision-web-resultado">
+        {res && <Resultado res={res} desactualizado={texto !== textoRevisado} />}
+      </div>
+    </section>
+  );
+}

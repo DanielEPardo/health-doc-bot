@@ -3,4 +3,10 @@
 - [x] Integrar Clerk en español y proteger /revision sin sesión.
 - [x] Añadir política de datos y contacto.
 - [x] Verificar página, preguntas frecuentes y acceso en celular y escritorio.
-- [ ] Ajustar el registro de Clerk a celular + Google sin nombre ni contraseña (bloqueado: los formularios ya se muestran, pero Clerk pide nombre, correo y contraseña y no ofrece celular; eso se cambia en la consola de Clerk, no en el código).
+- [ ] Ajustar el registro de Clerk a celular + Google sin nombre ni contraseña (bloqueado: los formularios ya se muestran, pero Clerk pide nombre, correo y contraseña y no ofrece celular; eso se cambia en la consola de Clerk, no en el código).- [x] Integrar el validador de tutelas (26 reglas con fundamento normativo) y la revisión inmediata en /revision.
+- [x] Crear el webhook /api/whatsapp con autorización de datos sensibles, borrado del texto y comando BORRAR.
+- [ ] Aplicar la migración supabase/migrations/20261009120000_bot_whatsapp_tutelas.sql en Lovable Cloud.
+- [ ] Configurar WhatsApp Cloud API (número, token, secretos) y registrar el webhook (ver INTEGRACION.md).
+- [ ] Decidir el costo de la revisión (WHATSAPP_MENSAJE_COSTO) y si la revisión web queda gratuita (REVISION_WEB_HABILITADA).
+- [ ] Probar la extracción con IA (ANTHROPIC_API_KEY) antes de activarla.
+- [ ] Revisión de los textos de las recomendaciones por un abogado.

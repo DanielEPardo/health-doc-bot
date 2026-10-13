@@ -3,6 +3,7 @@ import { Check, ClipboardCheck, FileCheck2, MessageCircle, ShieldCheck, Smartpho
 import { ReviewCTA } from '@/components/review-cta';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import hero from '@/assets/tutela-hero.jpg';
+import { REVISION_WEB_HABILITADA } from '@/lib/revision-access';
 
 const title = 'TuTelaGanas — Revisa tu tutela de salud antes de presentarla';
 const description = 'Revisión orientativa por WhatsApp para identificar qué le falta a tu tutela de salud contra una EPS en Colombia.';
@@ -30,7 +31,7 @@ function Index() {
       <div className="content-width hero-content"><div className="hero-copy">
         <p className="eyebrow"><ShieldCheck size={20} aria-hidden="true" /> Tu derecho a la salud, con más claridad</p>
         <h1 id="hero-title">Antes de presentar tu tutela, revisa que no le falte nada</h1>
-        <p className="hero-description">Envíanos tu tutela por WhatsApp y te decimos qué puntos le faltan o están débiles, para que los corrijas antes de entregarla al juzgado.</p>
+        <p className="hero-description">{REVISION_WEB_HABILITADA ? 'Pega tu tutela en la página o envíanosla por WhatsApp' : 'Envíanos tu tutela por WhatsApp'} y te decimos qué puntos le faltan o están débiles, para que los corrijas antes de entregarla al juzgado.</p>
         <ReviewCTA />
         <p className="cta-note">Crea tu cuenta en un minuto. Es una revisión orientativa, no reemplaza a un abogado.</p>
       </div></div>
@@ -42,7 +43,7 @@ function Index() {
     <section className="section"><div className="content-width">
       <div className="centered"><p className="section-kicker">Sencillo, paso a paso</p><h2>Cómo funciona</h2></div>
       <div className="steps">
-        {[{ icon: Smartphone, title: 'Crea tu cuenta', text: 'Con tu celular o Google, en menos de un minuto.' }, { icon: MessageCircle, title: 'Escríbenos por WhatsApp', text: 'Desde tu cuenta, abre el chat con un clic y envía el texto de tu tutela.' }, { icon: FileCheck2, title: 'Recibe la revisión', text: 'Te indicamos qué puntos cumple, cuáles no y qué corregir.' }].map((step, i) => <div className="step" key={step.title}><div className="step-icon"><step.icon size={28} strokeWidth={1.7} aria-hidden="true" /></div><p className="step-number">Paso {i + 1}</p><h3>{step.title}</h3><p>{step.text}</p></div>)}
+        {[{ icon: Smartphone, title: 'Crea tu cuenta', text: 'Con tu celular o Google, en menos de un minuto.' }, REVISION_WEB_HABILITADA ? { icon: MessageCircle, title: 'Envía tu tutela', text: 'Pégala en la página para una revisión inmediata, o envíala por WhatsApp desde tu cuenta.' } : { icon: MessageCircle, title: 'Escríbenos por WhatsApp', text: 'Desde tu cuenta, abre el chat con un clic y envía el texto de tu tutela.' }, { icon: FileCheck2, title: 'Recibe la revisión', text: 'Te indicamos qué puntos cumple, cuáles no y qué corregir.' }].map((step, i) => <div className="step" key={step.title}><div className="step-icon"><step.icon size={28} strokeWidth={1.7} aria-hidden="true" /></div><p className="step-number">Paso {i + 1}</p><h3>{step.title}</h3><p>{step.text}</p></div>)}
       </div><div className="steps-action"><ReviewCTA /></div>
     </div></section>
     <section className="section review-section"><div className="content-width review-layout">

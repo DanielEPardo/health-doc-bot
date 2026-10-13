@@ -25,16 +25,16 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">Página no encontrada</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          La página que buscas no existe o cambió de dirección. Desde el inicio puedes revisar tu tutela.
         </p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Go home
+            Ir al inicio
           </Link>
         </div>
       </div>
@@ -53,10 +53,10 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+          No pudimos cargar esta página
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          Tuvimos un problema de nuestro lado; tu información no se perdió. Intenta de nuevo o vuelve al inicio. Si sigue fallando, escríbenos a tutelaganas@gmail.com.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -66,13 +66,13 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            Intentar de nuevo
           </button>
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            Ir al inicio
           </a>
         </div>
       </div>
@@ -123,7 +123,7 @@ function RootComponent() {
   const { publishableKey } = Route.useLoaderData();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const showHeaderCTA = !['/revision', '/sign-in', '/sign-up'].includes(pathname);
-  const content = <><header className="site-header"><div className="content-width header-inner"><Brand />{showHeaderCTA && <span className="header-cta"><ReviewCTA /></span>}</div></header><Outlet /><footer className="footer"><div className="content-width footer-inner"><Brand /><a href="mailto:tutelaganas@gmail.com">tutelaganas@gmail.com</a><Link to="/politica-de-datos" className="text-link">Política de tratamiento de datos</Link></div></footer></>;
+  const content = <><header className="site-header"><div className="content-width header-inner"><Link to="/" className="brand-link" aria-label="TuTelaGanas — ir al inicio"><Brand /></Link>{showHeaderCTA && <span className="header-cta"><ReviewCTA /></span>}</div></header><Outlet /><footer className="footer"><div className="content-width footer-inner"><Brand /><a href="mailto:tutelaganas@gmail.com">tutelaganas@gmail.com</a><Link to="/politica-de-datos" className="text-link">Política de tratamiento de datos</Link></div></footer></>;
 
   return (
     <QueryClientProvider client={queryClient}>
