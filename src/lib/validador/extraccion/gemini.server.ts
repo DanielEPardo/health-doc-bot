@@ -1,7 +1,8 @@
 /**
- * Extractor con IA usando Google Gemini (API REST generateContent, sin SDK: funciona en Cloudflare).
+ * Extracción y análisis jurídico con Google Gemini (API REST generateContent, sin SDK: funciona en Cloudflare).
  *
- * - La IA solo EXTRAE datos al esquema fijo; las reglas determinísticas deciden.
+ * - La extracción lleva los datos al esquema fijo; las reglas determinísticas deciden.
+ * - El análisis jurídico (../analisis/juridico.ts) es complementario: no cambia el dictamen.
  * - Respaldo en cadena: prueba el modelo más reciente y, si está caído, saturado (429/5xx),
  *   no disponible para la clave o responde mal, pasa al siguiente, y así sucesivamente.
  * - La lista de modelos se descubre con la API (ListModels) y se ordena del más nuevo al más viejo,
@@ -10,7 +11,13 @@
  *   y ser leído por revisores humanos (https://ai.google.dev/gemini-api/terms). Por eso el texto se
  *   anonimiza antes de enviarlo (./anonimizar.ts) y el usuario debe autorizarlo expresamente.
  */
-import type { TutelaExtraida } from "../types";
+import type { AnalisisJuridicoIA, ResultadoRegla, TutelaExtraida } from "../types";
+import {
+  ESQUEMA_ANALISIS,
+  INSTRUCCIONES_ANALISIS,
+  normalizarAnalisis,
+  peticionAnalisis,
+} from "../analisis/juridico";
 import { ESQUEMA_EXTRACCION, INSTRUCCIONES_EXTRACCION, normalizarExtraccion } from "./esquema";
 
 const API = "https://generativelanguage.googleapis.com/v1beta";
@@ -33,6 +40,8 @@ export interface OpcionesGemini {
   modelos?: string[];
   /** Tiempo máximo por intento, en ms. */
   tiempoMaximoMs?: number;
+  /** Máximo de modelos a probar (por defecto, todos). */
+  maxIntentos?: number;
   /** Inyectable para pruebas. */
   fetch?: typeof fetch;
 }
@@ -150,8 +159,15 @@ interface RespuestaGemini {
 /** Error que no se arregla cambiando de modelo (clave inválida o sin permiso): se detiene la cadena. */
 class ErrorDefinitivo extends Error {}
 
+/** Una petición estructurada a Gemini: instrucciones, mensaje y esquema de la respuesta JSON. */
+export interface PeticionGemini {
+  sistema: string;
+  usuario: string;
+  esquema: Esquema;
+}
+
 async function intentar(
-  texto: string,
+  p: PeticionGemini,
   modelo: string,
   apiKey: string,
   f: typeof fetch,
@@ -165,34 +181,11 @@ async function intentar(
       signal: abortar.signal,
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
-        systemInstruction: {
-          parts: [
-            {
-              text: INSTRUCCIONES_EXTRACCION.replace(
-                "con la herramienta registrar_extraccion",
-                "en el JSON de respuesta",
-              )
-                .replace(
-                  "Llama a registrar_extraccion exactamente una vez.",
-                  "Responde solo con el JSON.",
-                )
-                .concat(
-                  '\n- El texto viene anonimizado: [NOMBRE], [DOCUMENTO], [TELÉFONO], [CORREO] y [DIRECCIÓN] indican que el dato SÍ está en la tutela original. Registra el marcador tal cual en el campo correspondiente (p. ej. accionante.nombre = "[NOMBRE]").',
-                ),
-            },
-          ],
-        },
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: `<tutela>\n${texto}\n</tutela>\n\nExtrae los elementos de esta tutela.` },
-            ],
-          },
-        ],
+        systemInstruction: { parts: [{ text: p.sistema }] },
+        contents: [{ role: "user", parts: [{ text: p.usuario }] }],
         generationConfig: {
           responseMimeType: "application/json",
-          responseSchema: esquemaParaGemini(ESQUEMA_EXTRACCION as Esquema),
+          responseSchema: esquemaParaGemini(p.esquema),
           temperature: 0,
         },
       }),
@@ -223,31 +216,36 @@ async function intentar(
 }
 
 /**
- * Extrae con Gemini probando los modelos en orden hasta que uno responda.
- * `texto` debe llegar YA anonimizado (ver anonimizar.ts).
+ * Llama a Gemini probando los modelos en orden hasta que uno responda y `convertir` acepte la
+ * respuesta (si `convertir` lanza error, se pasa al siguiente modelo).
  */
-export async function extraerConGemini(
-  texto: string,
+export async function generarConGemini<T>(
+  peticion: PeticionGemini,
+  convertir: (crudo: unknown, modelo: string) => T,
   opciones: OpcionesGemini,
-): Promise<ResultadoGemini> {
+): Promise<{ valor: T; modelo: string; intentosFallidos: ResultadoGemini["intentosFallidos"] }> {
   const f = opciones.fetch ?? fetch;
   const modelos = opciones.modelos?.length
     ? opciones.modelos
     : await modelosDisponibles(opciones.apiKey, f);
   const intentosFallidos: ResultadoGemini["intentosFallidos"] = [];
   // Primero los modelos sanos (en orden de preferencia); los enfriados quedan al final como último recurso.
-  const orden = [...modelos.filter((m) => !enEnfriamiento(m)), ...modelos.filter(enEnfriamiento)];
+  const orden = [
+    ...modelos.filter((m) => !enEnfriamiento(m)),
+    ...modelos.filter(enEnfriamiento),
+  ].slice(0, opciones.maxIntentos ?? Infinity);
   for (const modelo of orden) {
     try {
       const crudo = await intentar(
-        texto,
+        peticion,
         modelo,
         opciones.apiKey,
         f,
         opciones.tiempoMaximoMs ?? TIEMPO_POR_INTENTO_MS,
       );
+      const valor = convertir(crudo, modelo);
       enfriados.delete(modelo);
-      return { extraccion: normalizarExtraccion(crudo, texto.length), modelo, intentosFallidos };
+      return { valor, modelo, intentosFallidos };
     } catch (err) {
       if (err instanceof ErrorDefinitivo) throw err;
       intentosFallidos.push({ modelo, motivo: (err as Error).message });
@@ -260,4 +258,62 @@ export async function extraerConGemini(
   throw new Error(
     `Ningún modelo de Gemini respondió: ${intentosFallidos.map((i) => `${i.modelo}: ${i.motivo}`).join(" | ")}`,
   );
+}
+
+const MARCADORES_GEMINI =
+  '\n- El texto viene anonimizado: [NOMBRE], [DOCUMENTO], [TELÉFONO], [CORREO] y [DIRECCIÓN] indican que el dato SÍ está en la tutela original. Registra el marcador tal cual en el campo correspondiente (p. ej. accionante.nombre = "[NOMBRE]").';
+
+/**
+ * Extrae con Gemini probando los modelos en orden hasta que uno responda.
+ * `texto` debe llegar YA anonimizado (ver anonimizar.ts).
+ */
+export async function extraerConGemini(
+  texto: string,
+  opciones: OpcionesGemini,
+): Promise<ResultadoGemini> {
+  const sistema = INSTRUCCIONES_EXTRACCION.replace(
+    "con la herramienta registrar_extraccion",
+    "en el JSON de respuesta",
+  )
+    .replace("Llama a registrar_extraccion exactamente una vez.", "Responde solo con el JSON.")
+    .concat(MARCADORES_GEMINI);
+  const r = await generarConGemini(
+    {
+      sistema,
+      usuario: `<tutela>\n${texto}\n</tutela>\n\nExtrae los elementos de esta tutela.`,
+      esquema: ESQUEMA_EXTRACCION as Esquema,
+    },
+    (crudo) => normalizarExtraccion(crudo, texto.length),
+    opciones,
+  );
+  return { extraccion: r.valor, modelo: r.modelo, intentosFallidos: r.intentosFallidos };
+}
+
+/** Tiempo por intento del análisis jurídico: la respuesta es más larga que la extracción. */
+export const TIEMPO_ANALISIS_MS = 25_000;
+
+/**
+ * Análisis jurídico complementario con Gemini (ver ../analisis/juridico.ts).
+ * `textoAnonimo` debe llegar YA anonimizado. Prueba a lo sumo 2 modelos para no alargar la espera.
+ */
+export async function analizarConGemini(
+  textoAnonimo: string,
+  resultados: ResultadoRegla[],
+  opciones: OpcionesGemini,
+): Promise<AnalisisJuridicoIA> {
+  const r = await generarConGemini(
+    {
+      sistema: `${INSTRUCCIONES_ANALISIS}\n\nResponde solo con el JSON.`,
+      usuario: peticionAnalisis(textoAnonimo, resultados),
+      esquema: ESQUEMA_ANALISIS as Esquema,
+    },
+    (crudo, modelo) =>
+      normalizarAnalisis(
+        crudo,
+        resultados.map((x) => x.reglaId),
+        modelo,
+      ),
+    { maxIntentos: 2, tiempoMaximoMs: TIEMPO_ANALISIS_MS, ...opciones },
+  );
+  return r.valor;
 }

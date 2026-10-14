@@ -15,6 +15,9 @@ Una tutela de salud contiene **datos sensibles** (diagnósticos, tratamientos) y
 | **Seguridad** | Ley 1581, art. 4 lit. g | Firma HMAC de Meta verificada; secretos solo en servidor; RLS en tablas; nada expuesto al navegador. |
 | Informar a los **encargados** | Ley 1581, art. 3 lit. d | El texto de autorización menciona a Meta y al proveedor de análisis. Actualizar `/politica-de-datos` para nombrar: Clerk, Meta (WhatsApp) y, si se activa la IA, Anthropic. |
 
+| **Transparencia** sobre el uso de IA | Ley 1581, art. 4 lit. e; SIC, Circular Externa 002 de 2024 (tratamiento de datos personales en sistemas de IA) | Aviso legal único en `src/lib/validador/aviso-ia.ts`: qué hace la IA, que no decide el resultado, que puede equivocarse, que no es asesoría jurídica, qué datos salen y hacia dónde, y que es voluntario. El bot lo envía **antes** de pedir "ACEPTO" (y con el comando `IA`) y queda en la constancia del consentimiento; la web lo muestra junto a la casilla; `/politica-de-datos` lo repite. Cada reporte marca las «Observaciones de la IA» aparte, con su advertencia. |
+| Sin **decisiones automatizadas** sobre la persona | Ley 1581, art. 4 (finalidad y libertad) | La IA no decide: el dictamen y el puntaje salen de reglas fijas con fundamento; sus observaciones son complementarias y solo pueden citar fuentes del catálogo (`normativa/fuentes.ts`). |
+
 ## 6.2 Lo que NO se debe hacer
 
 - Pedir fotos de la historia clínica o de documentos por WhatsApp.
@@ -24,4 +27,4 @@ Una tutela de salud contiene **datos sensibles** (diagnósticos, tratamientos) y
 
 ## 6.3 Transferencia internacional
 
-Meta, Clerk y Anthropic procesan datos fuera de Colombia. La Ley 1581 (art. 26) regula la transferencia internacional; la transmisión a un **encargado** que actúa por cuenta del responsable se rige por un contrato de transmisión. Recomendación: revisar con un abogado los términos de cada proveedor y reflejarlos en la política.
+Meta, Clerk, Google (Gemini) y Anthropic procesan datos fuera de Colombia. La Ley 1581 (art. 26) regula la transferencia internacional; una de sus excepciones es la autorización expresa e inequívoca del titular, por eso el aviso de IA dice que el texto anonimizado se procesa fuera de Colombia; la transmisión a un **encargado** que actúa por cuenta del responsable se rige por un contrato de transmisión. Recomendación: revisar con un abogado los términos de cada proveedor y reflejarlos en la política.

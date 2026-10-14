@@ -88,13 +88,27 @@ describe("Webhook", () => {
 });
 
 describe("Bot con IA", () => {
-  it("si usa Gemini, la autorización lo informa y queda registrada tal cual", async () => {
+  it("si usa Gemini, envía el aviso legal de IA antes de la autorización y registra ambos tal cual", async () => {
     const almacen = new AlmacenMemoria();
     const c = cfg(almacen, { ia: "gemini" });
-    const [aviso] = await procesarMensaje(c, "57309", "hola");
-    expect(aviso).toContain("Google Gemini");
-    expect(aviso).toContain("sin tu nombre, cédula");
+    const [avisoIA, autorizacion] = await procesarMensaje(c, "57309", "hola");
+    expect(avisoIA).toContain("Aviso legal sobre el uso de inteligencia artificial");
+    expect(avisoIA).toContain("No es asesoría jurídica");
+    expect(avisoIA).toContain("Puede equivocarse");
+    expect(avisoIA).toContain("fuera de Colombia");
+    expect(autorizacion).toContain("Google Gemini");
+    expect(autorizacion).toContain("sin tu nombre, cédula");
     await procesarMensaje(c, "57309", "ACEPTO");
-    expect(almacen.consentimientos[0]?.texto).toBe(aviso);
+    expect(almacen.consentimientos[0]?.texto).toBe(`${avisoIA}\n\n${autorizacion}`);
+  });
+  it("el comando IA reenvía el aviso; sin IA configurada no se muestra", async () => {
+    const c = cfg(new AlmacenMemoria(), { ia: "gemini" });
+    const [aviso] = await procesarMensaje(c, "57310", "ia");
+    expect(aviso).toContain("Aviso legal sobre el uso de inteligencia artificial");
+    expect((await procesarMensaje(c, "57310", "AYUDA"))[0]).toContain("*IA*");
+    const sinIA = cfg(new AlmacenMemoria());
+    const [primero] = await procesarMensaje(sinIA, "57311", "hola");
+    expect(primero).not.toContain("Aviso legal sobre el uso de inteligencia artificial");
+    expect((await procesarMensaje(sinIA, "57311", "AYUDA"))[0]).not.toContain("*IA*");
   });
 });

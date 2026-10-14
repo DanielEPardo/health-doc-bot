@@ -12,6 +12,8 @@ import { ESQUEMA_EXTRACCION, normalizarExtraccion } from "@/lib/validador/extrac
 import { anonimizar } from "@/lib/validador/extraccion/anonimizar";
 import { extraerHeuristico } from "@/lib/validador";
 import { proveedorIADesdeEntorno, validarTutela } from "@/lib/validador/servidor.server";
+import { normalizarAnalisis, ESQUEMA_ANALISIS } from "@/lib/validador/analisis/juridico";
+import { formatearWhatsApp } from "@/lib/validador";
 
 const leer = (n: string) => readFileSync(path.join(process.cwd(), "src/test/fixtures", n), "utf8");
 const json = (cuerpo: unknown, status = 200) =>
@@ -228,5 +230,106 @@ describe("Gemini — enfriamiento de modelos saturados", () => {
     });
     expect(r.modelo).toBe("b");
     expect(llamados).toEqual(["b"]);
+  });
+});
+
+describe("Análisis jurídico con IA (complementario)", () => {
+  const analisis = {
+    resumen: "La tutela explica bien la negativa, pero no la urgencia.",
+    observaciones: [
+      {
+        titulo: "Explica el riesgo para tu salud",
+        prioridad: "alta",
+        reglaId: "P02",
+        explicacion: "El juez revisa si hay perjuicio irremediable.",
+        sugerencia: "Cuenta qué pasa si no recibes el servicio pronto.",
+        fuentes: ["CP-86", "SU-508-2020", "T-999-2099"],
+      },
+      {
+        titulo: "Sin explicación",
+        prioridad: "media",
+        reglaId: null,
+        explicacion: "",
+        sugerencia: "",
+        fuentes: [],
+      },
+    ],
+  };
+  const esAnalisis = (body: string) => body.includes("análisis jurídico complementario");
+
+  it("solo deja fuentes del catálogo y reglas existentes (no hay citas inventadas)", () => {
+    const a = normalizarAnalisis(
+      { ...analisis, observaciones: [{ ...analisis.observaciones[0], reglaId: "Z99" }] },
+      ["P02"],
+      "m",
+    );
+    expect(a.observaciones[0]?.fuentes.map((f) => f.id)).toEqual(["CP-86", "SU-508-2020"]);
+    expect(a.observaciones[0]?.reglaId).toBeNull();
+    expect(() => normalizarAnalisis({}, [], "m")).toThrow(/vacío/);
+    const g = esquemaParaGemini(ESQUEMA_ANALISIS as Record<string, unknown>);
+    expect(JSON.stringify(g)).toContain("SU-508-2020");
+  });
+
+  it("se agrega al resultado sin cambiar dictamen ni puntaje, y lo enviado va anonimizado y sin hallazgos", async () => {
+    const t = leer("tutela-completa.txt");
+    const cuerpos: string[] = [];
+    const f = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = String(init?.body ?? "");
+      cuerpos.push(body);
+      return esAnalisis(body) ? ok(analisis) : ok({ calidad: "nombre_propio" });
+    });
+    const entorno = { GEMINI_API_KEY: "k", GEMINI_MODELOS: "a" };
+    const con = await validarTutela(t, {
+      ia: "gemini",
+      entorno,
+      fetch: f as unknown as typeof fetch,
+    });
+    const sin = await validarTutela(t, {
+      ia: "gemini",
+      entorno: { ...entorno, IA_ANALISIS: "no" },
+      fetch: f as unknown as typeof fetch,
+    });
+    expect(con.analisisIA?.observaciones).toHaveLength(1);
+    expect(con.analisisIA?.modelo).toBe("a");
+    expect(sin.analisisIA).toBeUndefined();
+    expect(con.dictamen).toBe(sin.dictamen);
+    expect(con.puntaje).toBe(sin.puntaje);
+    const enviadoAnalisis = cuerpos.find(esAnalisis) ?? "";
+    expect(enviadoAnalisis).toContain("revision_automatica");
+    for (const dato of ["43.555.123", "43555123", "María Fernanda", "mariaf.rios@example.com"])
+      expect(enviadoAnalisis).not.toContain(dato);
+    expect(cuerpos.filter(esAnalisis)).toHaveLength(1); // con IA_ANALISIS=no no se pide
+  });
+
+  it("si el análisis falla, la revisión sale igual (sin observaciones)", async () => {
+    const f = vi.fn(async (_url: string, init?: RequestInit) =>
+      esAnalisis(String(init?.body ?? ""))
+        ? json({ error: { message: "high demand" } }, 503)
+        : ok({ calidad: "nombre_propio" }),
+    );
+    const res = await validarTutela(leer("tutela-completa.txt"), {
+      ia: "gemini",
+      entorno: { GEMINI_API_KEY: "k", GEMINI_MODELOS: "a,b" },
+      fetch: f as unknown as typeof fetch,
+    });
+    expect(res.origenExtraccion).toBe("ia+heuristica");
+    expect(res.analisisIA).toBeUndefined();
+  });
+
+  it("el reporte de WhatsApp muestra las observaciones aparte, con la advertencia y el fundamento", async () => {
+    const f = vi.fn(async (_url: string, init?: RequestInit) =>
+      esAnalisis(String(init?.body ?? "")) ? ok(analisis) : ok({ calidad: "nombre_propio" }),
+    );
+    const res = await validarTutela(leer("tutela-completa.txt"), {
+      ia: "gemini",
+      entorno: { GEMINI_API_KEY: "k", GEMINI_MODELOS: "a" },
+      fetch: f as unknown as typeof fetch,
+    });
+    const texto = formatearWhatsApp(res).join("\n");
+    expect(texto).toContain("Observaciones de la IA");
+    expect(texto).toContain("pueden tener errores");
+    expect(texto).toContain("Explica el riesgo para tu salud");
+    expect(texto).toContain("Constitución Política, art. 86");
+    expect(texto).not.toContain("T-999-2099");
   });
 });

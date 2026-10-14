@@ -9,6 +9,7 @@ import {
   Info,
   Loader2,
   RotateCcw,
+  Scale,
   Sparkles,
   Search,
   XCircle,
@@ -25,10 +26,17 @@ import {
   LONGITUD_MAXIMA,
   LONGITUD_MINIMA,
   validarTexto,
+  type AnalisisJuridicoIA,
   type Dictamen,
   type Estado,
+  type PrioridadObservacion,
   type ResultadoRegla,
 } from "@/lib/validador";
+import {
+  NOTA_OBSERVACIONES_IA,
+  puntosAvisoIA,
+  type ProveedorAviso,
+} from "@/lib/validador/aviso-ia";
 import { getEstadoIA, revisarConIA, type ResultadoPublico } from "@/lib/revision-ia.functions";
 
 type ClerkGlobal = { Clerk?: { session?: { getToken: () => Promise<string | null> } | null } };
@@ -90,6 +98,16 @@ const TITULO_SIMPLE: Record<string, string> = {
   C01: "¿A qué juez la diriges?",
 };
 const titulo = (r: ResultadoRegla) => TITULO_SIMPLE[r.reglaId] ?? r.titulo;
+
+const PRIORIDAD: Record<PrioridadObservacion, string> = {
+  alta: "Importante",
+  media: "Para mejorar",
+  baja: "Sugerencia",
+};
+const NOMBRE_PROVEEDOR: Record<ProveedorAviso, string> = {
+  gemini: "Google Gemini",
+  anthropic: "Claude (Anthropic)",
+};
 
 /** H10 — Ayuda breve: partes mínimas de una tutela (Decreto 2591 de 1991, art. 14 y 37). */
 const PARTES_TUTELA = [
@@ -163,6 +181,59 @@ function Grupo({
   );
 }
 
+/** Observaciones jurídicas de la IA: separadas de las reglas y con su advertencia visible. */
+function ObservacionesIA({ a }: { a: AnalisisJuridicoIA }) {
+  return (
+    <section className="resultado-grupo resultado-ia" aria-labelledby="resultado-ia-titulo">
+      <h3 id="resultado-ia-titulo">
+        <Sparkles aria-hidden="true" /> Observaciones de la IA
+      </h3>
+      <p className="resultado-ia-nota">
+        <Info aria-hidden="true" /> {NOTA_OBSERVACIONES_IA}
+      </p>
+      {a.resumen && <p className="resultado-ia-resumen">{a.resumen}</p>}
+      <Accordion type="multiple">
+        {a.observaciones.map((o, i) => (
+          <AccordionItem key={`${i}-${o.titulo}`} value={`ia-${i}`}>
+            <AccordionTrigger className="regla-trigger">
+              <span className="regla-titulo">
+                <Scale aria-hidden="true" className="estado-icono estado-cumple" />
+                <span>{o.titulo}</span>
+                <span className={`regla-etiqueta prioridad-${o.prioridad}`}>
+                  {PRIORIDAD[o.prioridad]}
+                </span>
+              </span>
+            </AccordionTrigger>
+            <AccordionContent className="regla-contenido">
+              <p className="regla-hallazgo">{o.explicacion}</p>
+              {o.sugerencia && <p className="regla-recomendacion">{o.sugerencia}</p>}
+              {o.fuentes.length > 0 && (
+                <>
+                  <p className="regla-fundamento-titulo">Fundamento</p>
+                  <ul className="regla-fundamento">
+                    {o.fuentes.map((f) => (
+                      <li key={f.id}>
+                        <a
+                          className="text-link"
+                          href={f.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {f.cita}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </section>
+  );
+}
+
 /** H6 — Lista de correcciones en texto plano para copiar y tenerla a mano mientras se edita. */
 function listaCorrecciones(res: ResultadoPublico): string {
   const pendientes = res.resultados
@@ -175,6 +246,16 @@ function listaCorrecciones(res: ResultadoPublico): string {
       (r, i) =>
         `${i + 1}. ${titulo(r)} [${ETIQUETA[r.estado]}]\n   ${r.recomendacion || r.hallazgo}\n   Fundamento: ${r.fuentes.map((f) => f.cita).join("; ")}`,
     ),
+    ...(res.analisisIA
+      ? [
+          "",
+          "Observaciones de la IA (complementarias, verifícalas):",
+          ...res.analisisIA.observaciones.map(
+            (o) =>
+              `- ${o.titulo}: ${o.sugerencia || o.explicacion}${o.fuentes.length ? ` (${o.fuentes.map((f) => f.cita).join("; ")})` : ""}`,
+          ),
+        ]
+      : []),
     "",
     res.descargo,
   ].join("\n");
@@ -210,8 +291,8 @@ function Resultado({ res, desactualizado }: { res: ResultadoPublico; desactualiz
         <p className="resultado-origen">
           {res.modeloIA ? (
             <>
-              <Sparkles aria-hidden="true" /> Analizado con IA ({res.modeloIA}) y las reglas del
-              Decreto 2591
+              <Sparkles aria-hidden="true" /> Revisado con las reglas del Decreto 2591 y con IA (
+              {res.modeloIA}) como apoyo
             </>
           ) : (
             <>Revisado en tu navegador con las reglas del Decreto 2591</>
@@ -245,6 +326,7 @@ function Resultado({ res, desactualizado }: { res: ResultadoPublico; desactualiz
       </div>
       <Grupo titulo="Lo que debes corregir primero" reglas={criticos} abiertas />
       <Grupo titulo="Para fortalecer tu tutela" reglas={otros} />
+      {res.analisisIA && <ObservacionesIA a={res.analisisIA} />}
       {cumplidos.length > 0 && (
         <Accordion type="single" collapsible className="resultado-cumplidos">
           <AccordionItem value="cumplidos">
@@ -280,7 +362,8 @@ export function RevisionWeb() {
   const [borrado, setBorrado] = useState<{ texto: string; res: ResultadoPublico | null } | null>(
     null,
   );
-  const [iaDisponible, setIaDisponible] = useState(false);
+  const [proveedorIA, setProveedorIA] = useState<ProveedorAviso | null>(null);
+  const iaDisponible = proveedorIA !== null;
   const [usarIA, setUsarIA] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [avisoIA, setAvisoIA] = useState("");
@@ -292,8 +375,8 @@ export function RevisionWeb() {
   useEffect(() => {
     let activo = true;
     getEstadoIA()
-      .then((e) => activo && setIaDisponible(Boolean(e.proveedor)))
-      .catch(() => activo && setIaDisponible(false));
+      .then((e) => activo && setProveedorIA(e.proveedor ?? null))
+      .catch(() => activo && setProveedorIA(null));
     return () => {
       activo = false;
     };
@@ -426,23 +509,39 @@ export function RevisionWeb() {
           {aviso}
         </p>
       )}
-      {iaDisponible && (
+      {proveedorIA && (
         <div className="revision-web-ia">
           <label className="revision-web-ia-opcion">
             <input type="checkbox" checked={usarIA} onChange={(e) => setUsarIA(e.target.checked)} />
             <span>
-              <Sparkles aria-hidden="true" /> Usar análisis con IA (Google Gemini) para leer mejor
-              mi tutela
+              <Sparkles aria-hidden="true" /> Autorizo el análisis con IA (
+              {NOMBRE_PROVEEDOR[proveedorIA]}) de mi tutela y acepto el aviso legal sobre su uso
             </span>
           </label>
-          {/* Consentimiento informado (Ley 1581): qué se envía, a quién y con qué riesgo. */}
+          {/* Consentimiento informado (Ley 1581): qué se envía, a quién, con qué riesgo y qué decide la IA. */}
           <p className="revision-web-ia-detalle">
-            Si lo marcas, enviamos tu tutela{" "}
-            <strong>sin nombre, cédula, teléfono, correo ni dirección</strong> al servicio gratuito
-            de Google Gemini. Google puede usar ese texto para mejorar sus productos y personas de
-            Google pueden leerlo. No lo guardamos. Si no lo marcas, la revisión se hace solo en tu
-            navegador.
+            La IA te da observaciones con base en la Constitución, la ley y la jurisprudencia, pero
+            no decide el resultado y puede equivocarse. Enviamos tu tutela{" "}
+            <strong>sin nombre, cédula, teléfono, correo ni dirección</strong>
+            {proveedorIA === "gemini"
+              ? " al servicio gratuito de Google Gemini: Google puede usar ese texto para mejorar sus productos y personas de Google pueden leerlo."
+              : " a Anthropic."}{" "}
+            No lo guardamos.
           </p>
+          <details className="revision-web-ia-aviso">
+            <summary>
+              <Scale aria-hidden="true" /> Leer el aviso legal sobre el uso de inteligencia
+              artificial
+            </summary>
+            <dl>
+              {puntosAvisoIA(proveedorIA, "web").map((p) => (
+                <div key={p.titulo}>
+                  <dt>{p.titulo}</dt>
+                  <dd>{p.texto}</dd>
+                </div>
+              ))}
+            </dl>
+          </details>
         </div>
       )}
       {cargando && (

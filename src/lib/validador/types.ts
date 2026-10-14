@@ -248,6 +248,27 @@ export type Dictamen =
   /** Falta al menos un elemento crítico. */
   | "incompleta";
 
+export type PrioridadObservacion = "alta" | "media" | "baja";
+
+/** Observación jurídica de la IA. Complementa las reglas: no cambia el dictamen ni el puntaje. */
+export interface ObservacionIA {
+  titulo: string;
+  prioridad: PrioridadObservacion;
+  /** Regla a la que se refiere (p. ej. si la IA cree que la regla se equivocó), o null. */
+  reglaId: string | null;
+  explicacion: string;
+  sugerencia: string;
+  /** Solo fuentes del catálogo (normativa/fuentes.ts): la IA no puede citar normas fuera de él. */
+  fuentes: Fuente[];
+}
+
+export interface AnalisisJuridicoIA {
+  resumen: string;
+  observaciones: ObservacionIA[];
+  /** Modelo que hizo el análisis. */
+  modelo: string;
+}
+
 export interface ResultadoValidacion {
   version: string;
   fecha: string;
@@ -260,5 +281,7 @@ export interface ResultadoValidacion {
   origenExtraccion: "heuristica" | "ia" | "ia+heuristica";
   /** Modelo de IA que respondió (p. ej. "gemini-3.8-flash"), si se usó IA. */
   modeloIA?: string | undefined;
+  /** Análisis jurídico complementario de la IA (solo si se usó IA y respondió). */
+  analisisIA?: AnalisisJuridicoIA | undefined;
   descargo: string;
 }

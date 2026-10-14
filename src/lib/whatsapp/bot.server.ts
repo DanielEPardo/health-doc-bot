@@ -7,10 +7,13 @@
  * Flujo (coincide con lo que promete la landing https://health-doc-bot.lovable.app):
  *   1. Usuario escribe "Hola, quiero revisar mi tutela" (link wa.me de /revision).
  *   2. Bot pide AUTORIZACIÓN EXPRESA para tratar datos de salud (Ley 1581/2012 art. 6) → "ACEPTO".
+ *      Si hay IA configurada, antes envía el aviso legal sobre el uso de IA (validador/aviso-ia.ts),
+ *      que queda en la constancia del consentimiento junto con la autorización.
  *   3. Usuario pega el texto (uno o varios mensajes) y escribe "REVISAR".
  *   4. Bot valida y responde con el reporte (1–3 mensajes). El texto de la tutela se descarta.
- *   Comandos: AYUDA, NUEVA, BORRAR (supresión de datos — derecho del titular).
+ *   Comandos: AYUDA, NUEVA, BORRAR (supresión de datos — derecho del titular), IA (aviso de IA).
  */
+import { avisoIAWhatsApp } from "@/lib/validador/aviso-ia";
 import {
   formatearWhatsApp,
   LONGITUD_MAXIMA,
@@ -157,9 +160,9 @@ export const TEXTOS = {
   autorizacion: (url: string, ia: ProveedorIA | null = null) =>
     `👋 Hola, soy el asistente de *TuTelaGanas*.\n\nRevisaré si tu tutela de salud tiene los requisitos del *Decreto 2591 de 1991* y la jurisprudencia de la *Corte Constitucional*. Es una revisión *orientativa*: no reemplaza a un abogado ni garantiza el resultado.\n\n🔒 *Autorización de datos sensibles (Ley 1581 de 2012)*\nTu tutela contiene datos de salud, que son *sensibles*. No estás obligado(a) a autorizar su tratamiento. Si autorizas, usaremos el texto *solo* para esta revisión (lo procesan WhatsApp/Meta y Twilio como encargados), lo borraremos al terminar y guardaremos únicamente el resultado sin tus datos personales.${
       ia === "gemini"
-        ? "\n\n🤖 *Análisis con IA:* para leer mejor tu tutela enviamos el texto, *sin tu nombre, cédula, teléfono, correo ni dirección*, al servicio gratuito *Google Gemini*. Google puede usar ese texto para mejorar sus productos y personas de Google pueden leerlo."
+        ? "\n\n🤖 *Análisis con IA:* para leer mejor tu tutela y darte observaciones con base en la normativa, enviamos el texto, *sin tu nombre, cédula, teléfono, correo ni dirección*, al servicio gratuito *Google Gemini*. Google puede usar ese texto para mejorar sus productos y personas de Google pueden leerlo (ver el aviso legal sobre IA que te enviamos)."
         : ia === "anthropic"
-          ? "\n\n🤖 *Análisis con IA:* para leer mejor tu tutela enviamos el texto, *sin tu nombre, cédula, teléfono, correo ni dirección*, a nuestro proveedor de IA (Anthropic)."
+          ? "\n\n🤖 *Análisis con IA:* para leer mejor tu tutela y darte observaciones con base en la normativa, enviamos el texto, *sin tu nombre, cédula, teléfono, correo ni dirección*, a nuestro proveedor de IA (Anthropic) (ver el aviso legal sobre IA que te enviamos)."
           : ""
     } Puedes pedir el borrado en cualquier momento escribiendo *BORRAR*.\nPolítica: ${url}\n\n¿Autorizas el tratamiento de tus datos para esta revisión? Responde *ACEPTO* o *NO*.`,
   noAcepta:
@@ -174,8 +177,10 @@ export const TEXTOS = {
   final:
     "Cuando hagas los ajustes, escribe *NUEVA* para revisar la versión corregida. Escribe *BORRAR* si quieres que eliminemos tus datos.",
   borrado: "🗑️ Eliminamos tus datos y el historial de revisiones asociado a este número.",
-  ayuda:
-    "Comandos:\n• *REVISAR* — revisar el texto enviado\n• *NUEVA* — empezar una revisión nueva\n• *BORRAR* — eliminar tus datos\n• *AYUDA* — ver este mensaje",
+  ayuda: (ia: ProveedorIA | null = null) =>
+    `Comandos:\n• *REVISAR* — revisar el texto enviado\n• *NUEVA* — empezar una revisión nueva\n• *BORRAR* — eliminar tus datos${
+      ia ? "\n• *IA* — ver el aviso legal sobre el uso de inteligencia artificial" : ""
+    }\n• *AYUDA* — ver este mensaje`,
   noTexto:
     "Por ahora solo puedo leer *texto*. Copia y pega el contenido de tu tutela en el chat (si la tienes en Word o PDF, abre el archivo, selecciona todo y cópialo).",
   error:
@@ -214,20 +219,23 @@ export async function procesarMensaje(
     await a.borrarTodo(telefono);
     return [TEXTOS.borrado];
   }
-  if (c === "AYUDA") return [TEXTOS.ayuda];
+  if (c === "AYUDA") return [TEXTOS.ayuda(cfg.ia)];
+  if (c === "IA" && cfg.ia) return [avisoIAWhatsApp(cfg.ia)];
+  const politica = cfg.urlPolitica ?? URL_POLITICA;
+  // Lo que se le muestra antes de pedir la autorización (y lo que queda como prueba de ella).
+  const mensajesAutorizacion = cfg.ia
+    ? [avisoIAWhatsApp(cfg.ia), TEXTOS.autorizacion(politica, cfg.ia)]
+    : [TEXTOS.autorizacion(politica, cfg.ia)];
 
   switch (conv.estado) {
     case "nuevo":
       await guardar("esperando_consentimiento", "");
-      return [TEXTOS.autorizacion(cfg.urlPolitica ?? URL_POLITICA, cfg.ia)];
+      return mensajesAutorizacion;
 
     case "esperando_consentimiento":
       if (c === "ACEPTO" || c === "SI ACEPTO" || c === "SI") {
         // Se guarda el texto exacto que la persona aceptó (prueba de la autorización).
-        await a.registrarConsentimiento(
-          telefono,
-          TEXTOS.autorizacion(cfg.urlPolitica ?? URL_POLITICA, cfg.ia),
-        );
+        await a.registrarConsentimiento(telefono, mensajesAutorizacion.join("\n\n"));
         await guardar("recibiendo", "");
         return cfg.mensajeCosto ? [cfg.mensajeCosto, TEXTOS.pedirTexto] : [TEXTOS.pedirTexto];
       }

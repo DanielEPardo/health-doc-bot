@@ -1,4 +1,12 @@
-import type { Dictamen, Estado, ResultadoRegla, ResultadoValidacion } from "../types";
+import { NOTA_OBSERVACIONES_IA } from "../aviso-ia";
+import type {
+  AnalisisJuridicoIA,
+  Dictamen,
+  Estado,
+  PrioridadObservacion,
+  ResultadoRegla,
+  ResultadoValidacion,
+} from "../types";
 
 /** Límite de caracteres de un mensaje de texto de WhatsApp Cloud API. */
 export const LIMITE_WHATSAPP = 4096;
@@ -18,6 +26,32 @@ const ICONO: Record<Estado, string> = {
 };
 
 const ORDEN_SEV = { critico: 0, importante: 1, recomendacion: 2 } as const;
+
+const ICONO_PRIORIDAD: Record<PrioridadObservacion, string> = {
+  alta: "🔴",
+  media: "🟡",
+  baja: "💡",
+};
+
+/** Bloque de observaciones de la IA, separado de las reglas y con su advertencia. */
+function bloqueIA(a: AnalisisJuridicoIA, conFuente: boolean): string {
+  const obs = a.observaciones.map((o) => {
+    const fuente =
+      conFuente && o.fuentes.length
+        ? `\n   _Fundamento: ${o.fuentes
+            .map((f) => f.cita)
+            .slice(0, 3)
+            .join("; ")}_`
+        : "";
+    const sugerencia = o.sugerencia ? `\n   👉 ${o.sugerencia}` : "";
+    return `${ICONO_PRIORIDAD[o.prioridad]} *${o.titulo}*\n   ${o.explicacion}${sugerencia}${fuente}`;
+  });
+  return [
+    `*🤖 Observaciones de la IA*\n_${NOTA_OBSERVACIONES_IA}_`,
+    ...(a.resumen ? [a.resumen] : []),
+    ...obs,
+  ].join("\n\n");
+}
 
 function linea(r: ResultadoRegla, conFuente: boolean): string {
   const fuente =
@@ -60,6 +94,7 @@ export function formatearWhatsApp(
     bloques.push(
       `*Para fortalecer tu tutela:*\n\n${otros.map((r) => linea(r, conFuente)).join("\n\n")}`,
     );
+  if (res.analisisIA) bloques.push(bloqueIA(res.analisisIA, conFuente));
   if (cumplidos.length)
     bloques.push(`*Lo que ya está bien:*\n${cumplidos.map((r) => `✅ ${r.titulo}`).join("\n")}`);
   if (notas.length)
@@ -118,6 +153,20 @@ export function formatearMarkdown(res: ResultadoValidacion): string {
     "| Regla | Resultado | Severidad | Hallazgo | Recomendación | Fundamento |",
     "|---|---|---|---|---|---|",
     ...filas,
+    ...(res.analisisIA
+      ? [
+          "",
+          `## Observaciones de la IA (${res.analisisIA.modelo})`,
+          `_${NOTA_OBSERVACIONES_IA}_`,
+          "",
+          res.analisisIA.resumen,
+          "",
+          ...res.analisisIA.observaciones.map(
+            (o) =>
+              `- **${o.titulo}** (${o.prioridad}${o.reglaId ? `, regla ${o.reglaId}` : ""}): ${o.explicacion} ${o.sugerencia} ${o.fuentes.map((f) => `[${f.cita}](${f.url})`).join(", ")}`,
+          ),
+        ]
+      : []),
     "",
     `> ${res.descargo}`,
   ].join("\n");
