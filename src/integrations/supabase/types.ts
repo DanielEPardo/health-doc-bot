@@ -35,22 +35,55 @@ export type Database = {
         }
         Relationships: []
       }
+      consentimientos_web: {
+        Row: {
+          aceptado_en: string
+          alcance: string
+          id: number
+          revocado_en: string | null
+          texto_autorizacion: string
+          usuario_id: string
+          version: string
+        }
+        Insert: {
+          aceptado_en?: string
+          alcance: string
+          id?: never
+          revocado_en?: string | null
+          texto_autorizacion: string
+          usuario_id: string
+          version: string
+        }
+        Update: {
+          aceptado_en?: string
+          alcance?: string
+          id?: never
+          revocado_en?: string | null
+          texto_autorizacion?: string
+          usuario_id?: string
+          version?: string
+        }
+        Relationships: []
+      }
       conversaciones: {
         Row: {
           actualizado: string
           buffer: string
+          documentos: Json | null
           estado: string
           telefono: string
         }
         Insert: {
           actualizado?: string
           buffer?: string
+          documentos?: Json | null
           estado: string
           telefono: string
         }
         Update: {
           actualizado?: string
           buffer?: string
+          documentos?: Json | null
           estado?: string
           telefono?: string
         }
@@ -89,6 +122,33 @@ export type Database = {
           id?: never
           resumen?: Json
           telefono?: string
+        }
+        Relationships: []
+      }
+      tutelas: {
+        Row: {
+          actualizado: string
+          contenido: string
+          creado: string
+          estado: string
+          id: string
+          usuario_id: string
+        }
+        Insert: {
+          actualizado?: string
+          contenido: string
+          creado?: string
+          estado: string
+          id?: string
+          usuario_id: string
+        }
+        Update: {
+          actualizado?: string
+          contenido?: string
+          creado?: string
+          estado?: string
+          id?: string
+          usuario_id?: string
         }
         Relationships: []
       }
