@@ -404,7 +404,7 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
 .perfil-autorizaciones { display:grid; gap:12px; }
 .perfil-autorizaciones li { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; border:1px solid var(--border); border-radius:8px; }
 .perfil-autorizacion-titulo { font-weight:600; }
-/* Páginas legales, aviso de cookies y aceptación de términos */
+/* Páginas legales y aceptación de términos */
 .legal-vigencia { color:var(--muted-foreground); font-size:16px; margin-top:-12px; }
 .legal-indice { margin:8px 0 12px; padding:16px 20px; border:1px solid var(--border); border-radius:8px; background:var(--secondary); }
 .legal-indice > p { font-weight:700; margin-bottom:8px !important; }
@@ -428,9 +428,6 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
 }
 .footer-legal { display:flex; flex-wrap:wrap; gap:8px 20px; }
 .auth-legal { font-size:15px; color:var(--muted-foreground); max-width:460px; margin-top:16px; }
-.aviso-cookies { position:fixed; z-index:40; left:16px; right:16px; bottom:16px; max-width:720px; margin-inline:auto; display:flex; align-items:center; gap:14px; padding:14px 18px; border:1px solid var(--border); border-radius:10px; background:var(--card); color:var(--card-foreground); box-shadow:0 8px 30px rgb(0 0 0 / 0.12); font-size:16px; }
-.aviso-cookies p { flex:1; }
-.aviso-cookies-icono { width:22px; height:22px; flex-shrink:0; color:var(--primary); }
 .terminos-titulo { display:flex; gap:8px; align-items:center; }
 .terminos-titulo svg { width:22px; height:22px; color:var(--primary); }
 @media (max-width:767px) {
@@ -468,8 +465,7 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
  .faq-trigger { font-size:19px; }
  .footer-inner { flex-direction:column; align-items:flex-start; gap:17px; }
  .footer-legal { flex-direction:column; }
- .aviso-cookies { flex-wrap:wrap; left:12px; right:12px; bottom:12px; }
- .auth-page { padding-inline:20px; }
+  .auth-page { padding-inline:20px; }
  .policy h1 { font-size:31px; }
  .revision-web h2 { font-size:24px; }
  .revision-web-texto { min-height:220px; }

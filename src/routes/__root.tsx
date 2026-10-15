@@ -15,7 +15,6 @@ import { getClerkConfig } from '@/lib/clerk.functions';
 import { Brand } from '@/components/brand';
 import { ReviewCTA } from '@/components/review-cta';
 import { MenuCuenta } from '@/components/menu-cuenta';
-import { AvisoCookies } from '@/components/aviso-cookies';
 
 const ClerkBoundary = lazy(() => import('@/components/clerk-boundary'));
 
@@ -125,7 +124,7 @@ function RootComponent() {
   const { publishableKey } = Route.useLoaderData();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const showHeaderCTA = !['/revision', '/sign-in', '/sign-up', '/perfil'].includes(pathname);
-  const content = <><header className="site-header"><div className="content-width header-inner"><Link to="/" className="brand-link" aria-label="TuTelaGanas — ir al inicio"><Brand /></Link><span className="header-acciones">{showHeaderCTA && <span className="header-cta"><ReviewCTA /></span>}<MenuCuenta /></span></div></header><Outlet /><footer className="footer"><div className="content-width footer-inner"><Brand /><a href="mailto:tutelaganas@gmail.com">tutelaganas@gmail.com</a><nav aria-label="Información legal" className="footer-legal"><Link to="/politica-de-datos" className="text-link">Política de tratamiento de datos</Link><Link to="/terminos" className="text-link">Términos y condiciones</Link><Link to="/cookies" className="text-link">Política de cookies</Link></nav></div></footer><AvisoCookies /></>;
+  const content = <><header className="site-header"><div className="content-width header-inner"><Link to="/" className="brand-link" aria-label="TuTelaGanas — ir al inicio"><Brand /></Link><span className="header-acciones">{showHeaderCTA && <span className="header-cta"><ReviewCTA /></span>}<MenuCuenta /></span></div></header><Outlet /><footer className="footer"><div className="content-width footer-inner"><Brand /><a href="mailto:tutelaganas@gmail.com">tutelaganas@gmail.com</a><nav aria-label="Información legal" className="footer-legal"><Link to="/politica-de-datos" className="text-link">Política de tratamiento de datos</Link><Link to="/terminos" className="text-link">Términos y condiciones</Link></nav></div></footer></>;
 
   return (
     <QueryClientProvider client={queryClient}>

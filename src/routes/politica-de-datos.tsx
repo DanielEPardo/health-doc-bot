@@ -79,12 +79,10 @@ function Politica() {
                 la fecha.
               </li>
               <li>
-                <strong>Datos técnicos:</strong> los necesarios para mantener tu sesión y la
-                seguridad del servicio (ver la{" "}
-                <Link to="/cookies" className="text-link">
-                  política de cookies
-                </Link>
-                ).
+                <strong>Datos técnicos:</strong> los necesarios para mantener tu sesión (Clerk) y la
+                seguridad del servicio. El proveedor de alojamiento (Lovable) también registra datos
+                de visita, como las páginas vistas y el tiempo en ellas, para medir el
+                funcionamiento del sitio; esos datos no incluyen el contenido de tu tutela.
               </li>
             </ul>
           ),
@@ -167,7 +165,9 @@ function Politica() {
           titulo: "Uso de inteligencia artificial",
           contenido: (
             <>
-              <p>Este aviso aplica solo si autorizas el análisis con IA, en la web o en WhatsApp.</p>
+              <p>
+                Este aviso aplica solo si autorizas el análisis con IA, en la web o en WhatsApp.
+              </p>
               <dl className="policy-aviso-ia">
                 {puntosAvisoIA("gemini", "web").map((p) => (
                   <div key={p.titulo}>
@@ -191,10 +191,11 @@ function Politica() {
               </p>
               <ul className="legal-lista">
                 <li>Clerk: cuenta e inicio de sesión.</li>
-                <li>Lovable Cloud (Supabase y Cloudflare): alojamiento y base de datos.</li>
                 <li>
-                  Meta (WhatsApp) y Twilio: mensajes, si nos escribes por WhatsApp.
+                  Lovable Cloud (Supabase y Cloudflare): alojamiento, base de datos y medición de
+                  visitas.
                 </li>
+                <li>Meta (WhatsApp) y Twilio: mensajes, si nos escribes por WhatsApp.</li>
                 <li>
                   Google (Gemini) o Anthropic (Claude): análisis con IA y lectura de documentos, si
                   los autorizas.

@@ -15,9 +15,7 @@ vi.mock("@tanstack/react-router", () => ({
 
 const { Route: RutaDatos } = await import("@/routes/politica-de-datos");
 const { Route: RutaTerminos } = await import("@/routes/terminos");
-const { Route: RutaCookies } = await import("@/routes/cookies");
 const { RevisionWeb } = await import("@/components/revision-web");
-const { AvisoCookies } = await import("@/components/aviso-cookies");
 
 /** Revisa con axe-core (WCAG 2.1 A/AA). El contraste de color no se puede medir en jsdom. */
 async function violaciones(contenedor: HTMLElement) {
@@ -35,7 +33,6 @@ describe("Accesibilidad (axe-core, WCAG 2.1 AA)", () => {
   it.each([
     ["política de datos", RutaDatos],
     ["términos", RutaTerminos],
-    ["cookies", RutaCookies],
   ])("la página de %s no tiene violaciones", async (_n, ruta) => {
     const Pagina = componente(ruta);
     const { container } = render(<Pagina />);
@@ -45,11 +42,6 @@ describe("Accesibilidad (axe-core, WCAG 2.1 AA)", () => {
   it("la revisión web (con cuestionario abierto) no tiene violaciones", async () => {
     const { container } = render(<RevisionWeb />);
     container.querySelector("details")?.setAttribute("open", "");
-    expect(await violaciones(container)).toEqual([]);
-  });
-
-  it("el aviso de cookies no tiene violaciones", async () => {
-    const { container } = render(<AvisoCookies />);
     expect(await violaciones(container)).toEqual([]);
   });
 

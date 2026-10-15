@@ -24,7 +24,8 @@ export async function loadClerk(publishableKey: string) {
       }
       const clerk = clerkWindow.Clerk;
       if (!clerk) throw new Error('Clerk connection unavailable');
-      await clerk.load({ localization: esES });
+      // Sin telemetría: Clerk no envía estadísticas de uso a clerk-telemetry.com.
+      await clerk.load({ localization: esES, telemetry: false });
       return clerk;
     })().catch((error: unknown) => {
       clerkPromise = undefined;

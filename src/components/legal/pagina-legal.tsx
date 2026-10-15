@@ -52,10 +52,6 @@ export function PaginaLegal({
         ·{" "}
         <Link to="/terminos" className="text-link">
           Términos y condiciones
-        </Link>{" "}
-        ·{" "}
-        <Link to="/cookies" className="text-link">
-          Política de cookies
         </Link>
         .
       </p>

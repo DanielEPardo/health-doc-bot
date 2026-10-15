@@ -1,6 +1,6 @@
 /**
- * Datos del responsable del tratamiento que aparecen en la política de datos, los términos y la
- * política de cookies (Decreto 1377 de 2013, art. 13, compilado en el Decreto 1074 de 2015).
+ * Datos del responsable del tratamiento que aparecen en la política de datos y los términos
+ * (Decreto 1377 de 2013, art. 13, compilado en el Decreto 1074 de 2015).
  *
  * ⚠️ COMPLETAR antes de publicar: razón social o nombre, NIT o cédula y domicilio. Mientras tengan
  * el texto "[Por completar", las páginas lo muestran así para que se note que falta.

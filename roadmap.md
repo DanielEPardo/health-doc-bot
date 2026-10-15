@@ -21,7 +21,7 @@
 - [ ] Probar historial y documentos con una sesión real de Clerk.
 - [x] Ícono de perfil con «Mi perfil» (datos de cuenta, mis tutelas, autorizaciones) y webhook de Clerk para borrar el historial al eliminar la cuenta.
 - [ ] Registrar el webhook de Clerk (user.deleted) y crear el secreto CLERK_WEBHOOK_SECRET.
-- [x] Política de datos completa, términos y condiciones, política de cookies, aceptación obligatoria con casilla y pruebas de accesibilidad.
+- [x] Política de datos completa, términos y condiciones, aceptación obligatoria con casilla y pruebas de accesibilidad (la política de cookies se quitó el 15-oct-2026).
 - [ ] Completar razón social, NIT y domicilio en src/lib/datos-responsable.ts y pasar los documentos legales por un abogado.
 - [ ] Verificar si hay que registrar la base de datos en el Registro Nacional de Bases de Datos (SIC).
 

@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as MisTutelasRouteImport } from './routes/mis-tutelas'
 import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PoliticaDeDatosRouteImport } from './routes/politica-de-datos'
@@ -26,11 +25,6 @@ import { Route as ApiPublicWhatsappEvolutionRouteImport } from './routes/api/pub
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CookiesRoute = CookiesRouteImport.update({
-  id: '/cookies',
-  path: '/cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MisTutelasRoute = MisTutelasRouteImport.update({
@@ -92,7 +86,6 @@ const ApiPublicWhatsappEvolutionRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/cookies': typeof CookiesRoute
   '/mis-tutelas': typeof MisTutelasRoute
   '/perfil': typeof PerfilRoute
   '/politica-de-datos': typeof PoliticaDeDatosRoute
@@ -107,7 +100,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/cookies': typeof CookiesRoute
   '/mis-tutelas': typeof MisTutelasRoute
   '/perfil': typeof PerfilRoute
   '/politica-de-datos': typeof PoliticaDeDatosRoute
@@ -123,7 +115,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/cookies': typeof CookiesRoute
   '/mis-tutelas': typeof MisTutelasRoute
   '/perfil': typeof PerfilRoute
   '/politica-de-datos': typeof PoliticaDeDatosRoute
@@ -140,7 +131,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/cookies'
     | '/mis-tutelas'
     | '/perfil'
     | '/politica-de-datos'
@@ -155,7 +145,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/cookies'
     | '/mis-tutelas'
     | '/perfil'
     | '/politica-de-datos'
@@ -170,7 +159,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/cookies'
     | '/mis-tutelas'
     | '/perfil'
     | '/politica-de-datos'
@@ -186,7 +174,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CookiesRoute: typeof CookiesRoute
   MisTutelasRoute: typeof MisTutelasRoute
   PerfilRoute: typeof PerfilRoute
   PoliticaDeDatosRoute: typeof PoliticaDeDatosRoute
@@ -207,13 +194,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cookies': {
-      id: '/cookies'
-      path: '/cookies'
-      fullPath: '/cookies'
-      preLoaderRoute: typeof CookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mis-tutelas': {
@@ -298,7 +278,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CookiesRoute: CookiesRoute,
   MisTutelasRoute: MisTutelasRoute,
   PerfilRoute: PerfilRoute,
   PoliticaDeDatosRoute: PoliticaDeDatosRoute,
