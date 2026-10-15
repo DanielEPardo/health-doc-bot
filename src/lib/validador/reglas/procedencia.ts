@@ -120,7 +120,9 @@ export const reglasProcedencia: Regla[] = [
           hallazgo:
             "No se encontraron fechas para calcular cuánto tiempo ha pasado desde la negativa o la omisión.",
           recomendacion:
-            "Indica la fecha de la orden médica, de tu solicitud a la EPS y de la negativa (o desde cuándo esperas).",
+            ctx.documentos?.ordenMedica === "no"
+              ? "Indica la fecha de tu solicitud a la EPS y de su respuesta (o desde cuándo esperas)."
+              : "Indica la fecha de la orden médica, de tu solicitud a la EPS y de la negativa (o desde cuándo esperas).",
         };
       const meses = mesesEntre(t.fechaUltimaVulneracion, ctx.fechaReferencia);
       if (meses <= ctx.mesesAlertaInmediatez)

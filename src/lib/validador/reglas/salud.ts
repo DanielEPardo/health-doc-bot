@@ -25,7 +25,7 @@ export const reglasSalud: Regla[] = [
     categoria: "salud",
     severidad: "critico",
     fuentes: ["T-760-2008", "SU-508-2020"],
-    evaluar(t) {
+    evaluar(t, ctx) {
       const soloTransporte =
         t.servicios.length > 0 &&
         t.servicios.every((s) => ["transporte", "alojamiento_viaticos"].includes(s.tipo));
@@ -44,6 +44,13 @@ export const reglasSalud: Regla[] = [
             "No se menciona orden médica. Para el transporte intermunicipal no se exige prescripción (SU-508 de 2020), pero sí para los demás servicios que se reclamen.",
           recomendacion:
             "Adjunta la autorización del servicio en otro municipio (prueba la necesidad del traslado) y la orden médica de cualquier otro servicio que pidas.",
+        };
+      if (!t.ordenMedica.existe && ctx.documentos?.ordenMedica === "no")
+        return {
+          estado: "no_cumple",
+          hallazgo: "No tienes orden médica y la tutela no menciona ninguna.",
+          recomendacion:
+            "Pide la orden o fórmula al médico que te atiende (o MIPRES si el servicio no está en el plan de beneficios): es la prueba principal, porque el juez suele ordenar lo que prescribió el médico tratante (T-760 de 2008). Si no puedes conseguirla y la necesidad es evidente, explícalo en la tutela: el juez puede ordenar que la EPS te valore (SU-508 de 2020).",
         };
       if (!t.ordenMedica.existe)
         return {
@@ -279,27 +286,36 @@ export const reglasPruebas: Regla[] = [
     categoria: "pruebas",
     severidad: "importante",
     fuentes: ["D2591-14", "T-760-2008"],
-    evaluar(t) {
+    evaluar(t, ctx) {
+      // Si la persona dijo que NO tiene la orden médica, no se le pide «adjuntarla»: se le pide
+      // conseguirla (ver S01, D01 y D05).
+      const sinOrden = ctx.documentos?.ordenMedica === "no";
+      const conseguirOrden = sinOrden
+        ? " Como dijiste que no tienes la orden médica, consíguela antes de presentar la tutela."
+        : "";
       const a = new Set(t.anexos);
       if (a.size === 0)
         return {
           estado: "no_cumple",
           hallazgo: "No hay un apartado de pruebas o anexos.",
-          recomendacion:
-            "Agrega «PRUEBAS Y ANEXOS» y adjunta: copia del documento de identidad, orden médica, negación de la EPS (o radicado de tu solicitud) e historia clínica solo en lo pertinente.",
+          recomendacion: `Agrega «PRUEBAS Y ANEXOS» y adjunta: copia del documento de identidad, ${sinOrden ? "" : "orden médica, "}negación de la EPS (o radicado de tu solicitud) e historia clínica solo en lo pertinente.${conseguirOrden}`,
         };
       const faltan: string[] = [];
       if (!a.has("documento_identidad")) faltan.push("documento de identidad");
-      if (!a.has("orden_medica") && !a.has("formula_mipres")) faltan.push("orden médica");
+      if (!sinOrden && !a.has("orden_medica") && !a.has("formula_mipres"))
+        faltan.push("orden médica");
       if (!a.has("negacion_eps") && !a.has("derecho_peticion"))
         faltan.push("soporte de la negativa o del radicado");
       if (faltan.length === 0)
-        return { estado: "cumple", hallazgo: "Anexos mínimos relacionados." };
+        return {
+          estado: "cumple",
+          hallazgo: "Anexos mínimos relacionados.",
+          ...(conseguirOrden ? { recomendacion: conseguirOrden.trim() } : {}),
+        };
       return {
         estado: "debil",
         hallazgo: `En los anexos falta: ${faltan.join(", ")}.`,
-        recomendacion:
-          "Relaciona y adjunta esos documentos. Envía solo la historia clínica necesaria para el caso (datos sensibles).",
+        recomendacion: `Relaciona y adjunta esos documentos. Envía solo la historia clínica necesaria para el caso (datos sensibles).${conseguirOrden}`,
       };
     },
   },

@@ -108,7 +108,7 @@ const TITULO_SIMPLE: Record<string, string> = {
   S09: "Si la EPS no responde tus solicitudes (derecho de petición)",
   A01: "Pruebas y documentos que adjuntas",
   C01: "¿A qué juez la diriges?",
-  D01: "La orden médica que tienes",
+  D01: "Tu orden médica",
   D02: "¿Pides lo mismo que ordenó el médico?",
   D03: "¿Qué respondió la EPS y cómo lo pruebas?",
   D04: "Las fechas de tus documentos",

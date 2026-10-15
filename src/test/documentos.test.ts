@@ -139,3 +139,33 @@ describe("Cuestionario de documentos — validación de entrada", () => {
     expect(servicioMencionado("resonancia de columna", "cirugía de rodilla")).toBe(false);
   });
 });
+
+describe("Cuestionario de documentos — si NO tiene la orden médica", () => {
+  const sinOrden = incompleta.replace("que me mando el doctor ", "");
+  const res = validarTexto(sinOrden, {
+    fechaReferencia: FECHA,
+    declarados: {
+      ordenMedica: "no",
+      respuestaEPS: "no_se",
+      soportesClinicos: "no_se",
+      documentoIdentidad: "no_se",
+    },
+  });
+
+  it("ningún mensaje le pide adjuntar o relacionar una orden que no tiene", () => {
+    for (const r of res.resultados) {
+      const texto = `${r.hallazgo} ${r.recomendacion}`;
+      expect(texto, r.reglaId).not.toMatch(/adjunta:[^.]*orden médica/i);
+      expect(texto, r.reglaId).not.toMatch(/falta:[^.]*orden médica/i);
+      expect(texto, r.reglaId).not.toMatch(/fecha de la orden médica/i);
+    }
+  });
+
+  it("le dice que la consiga y cómo", () => {
+    expect(regla(res, "S01")?.hallazgo).toMatch(/No tienes orden médica/);
+    expect(regla(res, "S01")?.recomendacion).toMatch(/Pide la orden/);
+    expect(regla(res, "A01")?.recomendacion).toMatch(/consíguela antes de presentar/);
+    expect(regla(res, "D05")?.recomendacion).toMatch(/Consigue antes de presentarla/);
+    expect(regla(res, "D01")?.titulo).toBe("Tu orden médica y lo que dice la tutela");
+  });
+});

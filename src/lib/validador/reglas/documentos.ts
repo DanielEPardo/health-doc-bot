@@ -19,7 +19,7 @@ function diasDesde(iso: string, hasta: Date): number {
 export const reglasDocumentos: Regla[] = [
   {
     id: "D01",
-    titulo: "La orden médica que tienes y lo que dice la tutela",
+    titulo: "Tu orden médica y lo que dice la tutela",
     categoria: "pruebas",
     severidad: "importante",
     fuentes: ["T-760-2008", "SU-508-2020"],
