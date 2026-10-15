@@ -2,7 +2,7 @@ import type { Regla, TutelaExtraida } from "../types";
 
 const esSujetoEspecial = (t: TutelaExtraida) => t.afectado.condiciones.length > 0;
 
-function mesesEntre(isoDesde: string, hasta: Date): number {
+export function mesesEntre(isoDesde: string, hasta: Date): number {
   const d = new Date(`${isoDesde}T00:00:00`);
   return (
     (hasta.getFullYear() - d.getFullYear()) * 12 +

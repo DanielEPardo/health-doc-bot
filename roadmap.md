@@ -4,10 +4,24 @@
 - [x] Añadir política de datos y contacto.
 - [x] Verificar página, preguntas frecuentes y acceso en celular y escritorio.
 - [x] Aclarar en toda la página que la tutela se envía por WhatsApp o se pega en el revisor de la web.
-- [ ] Ajustar el registro de Clerk a celular + Google sin nombre ni contraseña (bloqueado: los formularios ya se muestran, pero Clerk pide nombre, correo y contraseña y no ofrece celular; eso se cambia en la consola de Clerk, no en el código).- [x] Integrar el validador de tutelas (26 reglas con fundamento normativo) y la revisión inmediata en /revision.
+- [ ] Ajustar el registro de Clerk a celular + Google sin nombre ni contraseña (bloqueado: los formularios ya se muestran, pero Clerk pide nombre, correo y contraseña y no ofrece celular; eso se cambia en la consola de Clerk, no en el código).
+- [x] Integrar el validador de tutelas (26 reglas con fundamento normativo) y la revisión inmediata en /revision.
 - [x] Crear el webhook /api/whatsapp con autorización de datos sensibles, borrado del texto y comando BORRAR.
 - [ ] Aplicar la migración supabase/migrations/20261009120000_bot_whatsapp_tutelas.sql en Lovable Cloud.
 - [ ] Configurar WhatsApp Cloud API (número, token, secretos) y registrar el webhook (ver INTEGRACION.md).
 - [ ] Decidir el costo de la revisión (WHATSAPP_MENSAJE_COSTO) y si la revisión web queda gratuita (REVISION_WEB_HABILITADA).
 - [ ] Probar la extracción con IA (ANTHROPIC_API_KEY) antes de activarla.
 - [ ] Revisión de los textos de las recomendaciones por un abogado.
+- [x] Preguntar por los documentos sin recibirlos (web y WhatsApp) y armar la lista de anexos.
+- [x] Subir la tutela en PDF (web: en el navegador; WhatsApp: el bot lo descarga).
+- [x] Historial de tutelas en la cuenta (en progreso / revisadas / presentadas), cifrado y con autorización.
+- [x] Lectura de documentos con IA con acuerdo de datos aparte (código listo; se activa con DOCUMENTOS_IA_PROVEEDOR).
+- [ ] Aplicar la migración supabase/migrations/20261011120000_historial_tutelas.sql y crear el secreto HISTORIAL_CLAVE.
+- [ ] Decidir el proveedor de pago para leer documentos y revisar el acuerdo con un abogado antes de activarlo.
+- [ ] Probar historial y documentos con una sesión real de Clerk.
+- [x] Ícono de perfil con «Mi perfil» (datos de cuenta, mis tutelas, autorizaciones) y webhook de Clerk para borrar el historial al eliminar la cuenta.
+- [ ] Registrar el webhook de Clerk (user.deleted) y crear el secreto CLERK_WEBHOOK_SECRET.
+- [x] Política de datos completa, términos y condiciones, política de cookies, aceptación obligatoria con casilla y pruebas de accesibilidad.
+- [ ] Completar razón social, NIT y domicilio en src/lib/datos-responsable.ts y pasar los documentos legales por un abogado.
+- [ ] Verificar si hay que registrar la base de datos en el Registro Nacional de Bases de Datos (SIC).
+

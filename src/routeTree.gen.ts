@@ -10,10 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CookiesRouteImport } from './routes/cookies'
+import { Route as MisTutelasRouteImport } from './routes/mis-tutelas'
+import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PoliticaDeDatosRouteImport } from './routes/politica-de-datos'
 import { Route as RevisionRouteImport } from './routes/revision'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as TerminosRouteImport } from './routes/terminos'
+import { Route as ApiClerkWebhookRouteImport } from './routes/api/clerk-webhook'
 import { Route as ApiWhatsappRouteImport } from './routes/api/whatsapp'
 import { Route as ApiPublicTwilioWhatsappRouteImport } from './routes/api/public/twilio/whatsapp'
 import { Route as ApiPublicWhatsappEvolutionRouteImport } from './routes/api/public/whatsapp/evolution'
@@ -21,6 +26,21 @@ import { Route as ApiPublicWhatsappEvolutionRouteImport } from './routes/api/pub
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MisTutelasRoute = MisTutelasRouteImport.update({
+  id: '/mis-tutelas',
+  path: '/mis-tutelas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerfilRoute = PerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PoliticaDeDatosRoute = PoliticaDeDatosRouteImport.update({
@@ -43,6 +63,16 @@ const SignUpRoute = SignUpRouteImport.update({
   path: '/sign-up',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TerminosRoute = TerminosRouteImport.update({
+  id: '/terminos',
+  path: '/terminos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiClerkWebhookRoute = ApiClerkWebhookRouteImport.update({
+  id: '/api/clerk-webhook',
+  path: '/api/clerk-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWhatsappRoute = ApiWhatsappRouteImport.update({
   id: '/api/whatsapp',
   path: '/api/whatsapp',
@@ -62,20 +92,30 @@ const ApiPublicWhatsappEvolutionRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cookies': typeof CookiesRoute
+  '/mis-tutelas': typeof MisTutelasRoute
+  '/perfil': typeof PerfilRoute
   '/politica-de-datos': typeof PoliticaDeDatosRoute
   '/revision': typeof RevisionRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/terminos': typeof TerminosRoute
+  '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
   '/api/public/twilio/whatsapp': typeof ApiPublicTwilioWhatsappRoute
   '/api/public/whatsapp/evolution': typeof ApiPublicWhatsappEvolutionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cookies': typeof CookiesRoute
+  '/mis-tutelas': typeof MisTutelasRoute
+  '/perfil': typeof PerfilRoute
   '/politica-de-datos': typeof PoliticaDeDatosRoute
   '/revision': typeof RevisionRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/terminos': typeof TerminosRoute
+  '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
   '/api/public/twilio/whatsapp': typeof ApiPublicTwilioWhatsappRoute
   '/api/public/whatsapp/evolution': typeof ApiPublicWhatsappEvolutionRoute
@@ -83,10 +123,15 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cookies': typeof CookiesRoute
+  '/mis-tutelas': typeof MisTutelasRoute
+  '/perfil': typeof PerfilRoute
   '/politica-de-datos': typeof PoliticaDeDatosRoute
   '/revision': typeof RevisionRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/terminos': typeof TerminosRoute
+  '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
   '/api/public/twilio/whatsapp': typeof ApiPublicTwilioWhatsappRoute
   '/api/public/whatsapp/evolution': typeof ApiPublicWhatsappEvolutionRoute
@@ -95,30 +140,45 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/cookies'
+    | '/mis-tutelas'
+    | '/perfil'
     | '/politica-de-datos'
     | '/revision'
     | '/sign-in'
     | '/sign-up'
+    | '/terminos'
+    | '/api/clerk-webhook'
     | '/api/whatsapp'
     | '/api/public/twilio/whatsapp'
     | '/api/public/whatsapp/evolution'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/cookies'
+    | '/mis-tutelas'
+    | '/perfil'
     | '/politica-de-datos'
     | '/revision'
     | '/sign-in'
     | '/sign-up'
+    | '/terminos'
+    | '/api/clerk-webhook'
     | '/api/whatsapp'
     | '/api/public/twilio/whatsapp'
     | '/api/public/whatsapp/evolution'
   id:
     | '__root__'
     | '/'
+    | '/cookies'
+    | '/mis-tutelas'
+    | '/perfil'
     | '/politica-de-datos'
     | '/revision'
     | '/sign-in'
     | '/sign-up'
+    | '/terminos'
+    | '/api/clerk-webhook'
     | '/api/whatsapp'
     | '/api/public/twilio/whatsapp'
     | '/api/public/whatsapp/evolution'
@@ -126,10 +186,15 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CookiesRoute: typeof CookiesRoute
+  MisTutelasRoute: typeof MisTutelasRoute
+  PerfilRoute: typeof PerfilRoute
   PoliticaDeDatosRoute: typeof PoliticaDeDatosRoute
   RevisionRoute: typeof RevisionRoute
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
+  TerminosRoute: typeof TerminosRoute
+  ApiClerkWebhookRoute: typeof ApiClerkWebhookRoute
   ApiWhatsappRoute: typeof ApiWhatsappRoute
   ApiPublicTwilioWhatsappRoute: typeof ApiPublicTwilioWhatsappRoute
   ApiPublicWhatsappEvolutionRoute: typeof ApiPublicWhatsappEvolutionRoute
@@ -142,6 +207,27 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mis-tutelas': {
+      id: '/mis-tutelas'
+      path: '/mis-tutelas'
+      fullPath: '/mis-tutelas'
+      preLoaderRoute: typeof MisTutelasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perfil': {
+      id: '/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof PerfilRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/politica-de-datos': {
@@ -172,6 +258,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignUpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terminos': {
+      id: '/terminos'
+      path: '/terminos'
+      fullPath: '/terminos'
+      preLoaderRoute: typeof TerminosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/clerk-webhook': {
+      id: '/api/clerk-webhook'
+      path: '/api/clerk-webhook'
+      fullPath: '/api/clerk-webhook'
+      preLoaderRoute: typeof ApiClerkWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/whatsapp': {
       id: '/api/whatsapp'
       path: '/api/whatsapp'
@@ -198,10 +298,15 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CookiesRoute: CookiesRoute,
+  MisTutelasRoute: MisTutelasRoute,
+  PerfilRoute: PerfilRoute,
   PoliticaDeDatosRoute: PoliticaDeDatosRoute,
   RevisionRoute: RevisionRoute,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
+  TerminosRoute: TerminosRoute,
+  ApiClerkWebhookRoute: ApiClerkWebhookRoute,
   ApiWhatsappRoute: ApiWhatsappRoute,
   ApiPublicTwilioWhatsappRoute: ApiPublicTwilioWhatsappRoute,
   ApiPublicWhatsappEvolutionRoute: ApiPublicWhatsappEvolutionRoute,

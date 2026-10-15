@@ -1,9 +1,11 @@
 import { fuentesPorId } from "./normativa/fuentes";
 import { extraerHeuristico } from "./extraccion/heuristica";
-import { REGLAS } from "./reglas/index";
+import { REGLAS, REGLAS_DOCUMENTOS } from "./reglas/index";
+import { prepararDocumentos } from "./documentos";
 import type {
   ContextoValidacion,
   Dictamen,
+  DocumentosDeclarados,
   Estado,
   ResultadoRegla,
   ResultadoValidacion,
@@ -40,7 +42,8 @@ export function evaluar(
     ...opciones,
   };
 
-  const resultados: ResultadoRegla[] = REGLAS.map((r) => {
+  const reglas = ctx.documentos ? [...REGLAS, ...REGLAS_DOCUMENTOS] : REGLAS;
+  const resultados: ResultadoRegla[] = reglas.map((r) => {
     const out = r.evaluar(extraccion, ctx);
     return {
       reglaId: r.id,
@@ -86,12 +89,27 @@ function dictaminar(rs: ResultadoRegla[]): Dictamen {
   return "lista_para_presentar";
 }
 
-/** Atajo síncrono: texto → validación con el extractor heurístico. */
-export function validarTexto(
+export interface OpcionesTexto extends Partial<ContextoValidacion> {
+  /** Respuestas del cuestionario de documentos (se comparan con el texto). */
+  declarados?: DocumentosDeclarados | null | undefined;
+}
+
+/** Convierte las respuestas del cuestionario en contexto para las reglas D##. */
+export function contextoDocumentos(
   texto: string,
-  opciones: Partial<ContextoValidacion> = {},
-): ResultadoValidacion {
-  return evaluar(extraerHeuristico(texto), { ...opciones, origen: "heuristica" });
+  declarados: DocumentosDeclarados | null | undefined,
+): Partial<ContextoValidacion> {
+  return declarados ? { documentos: prepararDocumentos(declarados, texto) } : {};
+}
+
+/** Atajo síncrono: texto → validación con el extractor heurístico. */
+export function validarTexto(texto: string, opciones: OpcionesTexto = {}): ResultadoValidacion {
+  const { declarados, ...ctx } = opciones;
+  return evaluar(extraerHeuristico(texto), {
+    ...ctx,
+    ...contextoDocumentos(texto, declarados),
+    origen: "heuristica",
+  });
 }
 
 /**

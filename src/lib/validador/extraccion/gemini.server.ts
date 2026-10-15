@@ -159,11 +159,17 @@ interface RespuestaGemini {
 /** Error que no se arregla cambiando de modelo (clave inválida o sin permiso): se detiene la cadena. */
 class ErrorDefinitivo extends Error {}
 
+/** Parte de un mensaje: texto o archivo en base64 (PDF o imagen, ver documentos-ia.server.ts). */
+export type ParteGemini = { text: string } | { inlineData: { mimeType: string; data: string } };
+
 /** Una petición estructurada a Gemini: instrucciones, mensaje y esquema de la respuesta JSON. */
 export interface PeticionGemini {
   sistema: string;
   usuario: string;
-  esquema: Esquema;
+  /** Archivos que acompañan el mensaje (van antes del texto). */
+  adjuntos?: ParteGemini[] | undefined;
+  /** Si no se da, la respuesta es texto libre (p. ej. transcribir una tutela escaneada). */
+  esquema?: Esquema | undefined;
 }
 
 async function intentar(
@@ -182,10 +188,11 @@ async function intentar(
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: p.sistema }] },
-        contents: [{ role: "user", parts: [{ text: p.usuario }] }],
+        contents: [{ role: "user", parts: [...(p.adjuntos ?? []), { text: p.usuario }] }],
         generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: esquemaParaGemini(p.esquema),
+          ...(p.esquema
+            ? { responseMimeType: "application/json", responseSchema: esquemaParaGemini(p.esquema) }
+            : {}),
           temperature: 0,
         },
       }),
@@ -205,7 +212,7 @@ async function intentar(
     const candidato = datos.candidates?.[0];
     const json = candidato?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
     if (!json) throw new Error(`sin contenido (${candidato?.finishReason ?? "sin candidato"})`);
-    return JSON.parse(json) as unknown;
+    return p.esquema ? (JSON.parse(json) as unknown) : json;
   } catch (err) {
     if ((err as Error).name === "AbortError")
       throw new Error(`sin respuesta en ${tiempoMs / 1000} s`);

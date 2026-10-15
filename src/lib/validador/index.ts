@@ -9,8 +9,24 @@
  */
 export * from "./types";
 export { FUENTES, fuentesPorId } from "./normativa/fuentes";
-export { REGLAS } from "./reglas/index";
-export { evaluar, validarTexto, combinarExtracciones, DESCARGO, VERSION } from "./motor";
+export { REGLAS, REGLAS_DOCUMENTOS } from "./reglas/index";
+export {
+  evaluar,
+  validarTexto,
+  contextoDocumentos,
+  combinarExtracciones,
+  DESCARGO,
+  VERSION,
+  type OpcionesTexto,
+} from "./motor";
+export {
+  normalizarDeclarados,
+  prepararDocumentos,
+  listaAnexos,
+  servicioMencionado,
+  ETIQUETA_RESPUESTA_EPS,
+  type AnexoSugerido,
+} from "./documentos";
 export { extraerHeuristico, normalizar } from "./extraccion/heuristica";
 export {
   formatearWhatsApp,

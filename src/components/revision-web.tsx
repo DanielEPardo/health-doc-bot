@@ -23,11 +23,15 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
+  extraerHeuristico,
   LONGITUD_MAXIMA,
   LONGITUD_MINIMA,
+  listaAnexos,
   validarTexto,
   type AnalisisJuridicoIA,
+  type AnexoSugerido,
   type Dictamen,
+  type DocumentosDeclarados,
   type Estado,
   type PrioridadObservacion,
   type ResultadoRegla,
@@ -38,8 +42,16 @@ import {
   type ProveedorAviso,
 } from "@/lib/validador/aviso-ia";
 import { getEstadoIA, revisarConIA, type ResultadoPublico } from "@/lib/revision-ia.functions";
-
-type ClerkGlobal = { Clerk?: { session?: { getToken: () => Promise<string | null> } | null } };
+import { getEstadoDocumentos } from "@/lib/documentos.functions";
+import { cabecerasDeSesion, motivoDe } from "@/lib/navegador";
+import {
+  CuestionarioDocumentos,
+  type ProveedorDocumentos,
+} from "@/components/cuestionario-documentos";
+import { SubirPDF } from "@/components/subir-pdf";
+import { ListaAnexos } from "@/components/lista-anexos";
+import { GuardarEnHistorial } from "@/components/guardar-historial";
+import { useHistorial } from "@/hooks/use-historial";
 
 /*
  * Revisión en la web. Diseño guiado por las 10 heurísticas de Nielsen
@@ -96,6 +108,11 @@ const TITULO_SIMPLE: Record<string, string> = {
   S09: "Si la EPS no responde tus solicitudes (derecho de petición)",
   A01: "Pruebas y documentos que adjuntas",
   C01: "¿A qué juez la diriges?",
+  D01: "La orden médica que tienes",
+  D02: "¿Pides lo mismo que ordenó el médico?",
+  D03: "¿Qué respondió la EPS y cómo lo pruebas?",
+  D04: "Las fechas de tus documentos",
+  D05: "Documentos que debes adjuntar",
 };
 const titulo = (r: ResultadoRegla) => TITULO_SIMPLE[r.reglaId] ?? r.titulo;
 
@@ -261,7 +278,15 @@ function listaCorrecciones(res: ResultadoPublico): string {
   ].join("\n");
 }
 
-function Resultado({ res, desactualizado }: { res: ResultadoPublico; desactualizado: boolean }) {
+function Resultado({
+  res,
+  desactualizado,
+  anexos,
+}: {
+  res: ResultadoPublico;
+  desactualizado: boolean;
+  anexos: AnexoSugerido[] | null;
+}) {
   const [copiado, setCopiado] = useState(false);
   const pendientes = res.resultados
     .filter((r) => r.estado === "no_cumple" || r.estado === "debil" || r.estado === "revisar")
@@ -327,6 +352,7 @@ function Resultado({ res, desactualizado }: { res: ResultadoPublico; desactualiz
       <Grupo titulo="Lo que debes corregir primero" reglas={criticos} abiertas />
       <Grupo titulo="Para fortalecer tu tutela" reglas={otros} />
       {res.analisisIA && <ObservacionesIA a={res.analisisIA} />}
+      {anexos && <ListaAnexos anexos={anexos} />}
       {cumplidos.length > 0 && (
         <Accordion type="single" collapsible className="resultado-cumplidos">
           <AccordionItem value="cumplidos">
@@ -352,21 +378,33 @@ function Resultado({ res, desactualizado }: { res: ResultadoPublico; desactualiz
 
 /**
  * Revisión en la web: corre el validador en el navegador del usuario.
- * El texto de la tutela no se envía a ningún servidor ni se guarda.
+ * El texto solo sale del navegador si la persona lo autoriza: análisis con IA (anonimizado),
+ * lectura de documentos (acuerdo aparte) o guardado en su historial (cifrado).
+ * `tutelaId` abre una tutela del historial para continuarla.
  */
-export function RevisionWeb() {
+export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}) {
   const [texto, setTexto] = useState("");
   const [res, setRes] = useState<ResultadoPublico | null>(null);
   const [textoRevisado, setTextoRevisado] = useState("");
   const [aviso, setAviso] = useState("");
-  const [borrado, setBorrado] = useState<{ texto: string; res: ResultadoPublico | null } | null>(
-    null,
-  );
+  const [borrado, setBorrado] = useState<{
+    texto: string;
+    res: ResultadoPublico | null;
+    id: string | null;
+  } | null>(null);
   const [proveedorIA, setProveedorIA] = useState<ProveedorAviso | null>(null);
   const iaDisponible = proveedorIA !== null;
   const [usarIA, setUsarIA] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [avisoIA, setAvisoIA] = useState("");
+  const [declarados, setDeclarados] = useState<DocumentosDeclarados | null>(null);
+  const [declaradosRevisados, setDeclaradosRevisados] = useState<DocumentosDeclarados | null>(null);
+  const [proveedorDocumentos, setProveedorDocumentos] = useState<ProveedorDocumentos | null>(null);
+  const [acuerdoDocumentos, setAcuerdoDocumentos] = useState(false);
+  const [avisoPDF, setAvisoPDF] = useState("");
+  const [continuando, setContinuando] = useState<{ titulo: string; detalle: string } | null>(null);
+  const historial = useHistorial();
+  const { guardar: guardarEnHistorial, cargar: cargarDelHistorial } = historial;
   const resultadoRef = useRef<HTMLDivElement>(null);
   const idTexto = useId();
   const idAyuda = useId();
@@ -377,10 +415,42 @@ export function RevisionWeb() {
     getEstadoIA()
       .then((e) => activo && setProveedorIA(e.proveedor ?? null))
       .catch(() => activo && setProveedorIA(null));
+    getEstadoDocumentos()
+      .then((e) => activo && setProveedorDocumentos(e.proveedor))
+      .catch(() => activo && setProveedorDocumentos(null));
     return () => {
       activo = false;
     };
   }, []);
+
+  // Continuar una tutela del historial (/revision?tutela=…).
+  useEffect(() => {
+    if (!tutelaId) return;
+    let vivo = true;
+    cargarDelHistorial(tutelaId)
+      .then((t) => {
+        if (!vivo) return;
+        setTexto(t.texto);
+        setDeclarados(t.declarados);
+        setContinuando({
+          titulo: t.titulo,
+          detalle: t.resultado
+            ? `Última revisión: ${t.resultado.puntaje}/100 el ${new Date(t.resultado.fecha).toLocaleDateString("es-CO")}. Revísala de nuevo para ver el detalle.`
+            : "Aún no la has revisado.",
+        });
+      })
+      .catch((err: unknown) => vivo && setAviso(`No pudimos abrir esa tutela (${motivoDe(err)}).`));
+    return () => {
+      vivo = false;
+    };
+  }, [tutelaId, cargarDelHistorial]);
+
+  // Guardado automático del borrador (si la persona lo autorizó y lo tiene activo).
+  useEffect(() => {
+    if (!historial.activo || texto.trim().length < 30) return;
+    const t = setTimeout(() => guardarEnHistorial(texto, declarados), 2000);
+    return () => clearTimeout(t);
+  }, [texto, declarados, historial.activo, guardarEnHistorial]);
 
   // H3 — el "deshacer" desaparece solo después de un rato.
   useEffect(() => {
@@ -414,39 +484,49 @@ export function RevisionWeb() {
     setAviso("");
     setAvisoIA("");
     const textoEnviado = texto;
+    let resultado: ResultadoPublico;
     if (usarIA && iaDisponible) {
       setCargando(true);
       try {
-        const token = await (window as unknown as ClerkGlobal).Clerk?.session?.getToken();
-        const r = await revisarConIA({
-          data: { texto: limpio, autorizaIA: true },
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        resultado = await revisarConIA({
+          data: { texto: limpio, autorizaIA: true, declarados },
+          headers: await cabecerasDeSesion(),
         });
-        setRes(r);
       } catch (err) {
         // H9 — si la IA falla, el usuario igual recibe su revisión y sabe por qué cambió.
-        setRes(validarTexto(limpio));
-        const motivo = (
-          err instanceof Error && err.message ? err.message : "error de conexión"
-        ).replace(/\.$/, "");
+        resultado = validarTexto(limpio, { declarados });
         setAvisoIA(
-          `No pudimos usar la IA (${motivo}). Te mostramos la revisión hecha en tu navegador.`,
+          `No pudimos usar la IA (${motivoDe(err)}). Te mostramos la revisión hecha en tu navegador.`,
         );
       } finally {
         setCargando(false);
       }
     } else {
-      setRes(validarTexto(limpio));
+      resultado = validarTexto(limpio, { declarados });
     }
+    setRes(resultado);
     setTextoRevisado(textoEnviado);
+    setDeclaradosRevisados(declarados);
+    if (historial.activo)
+      guardarEnHistorial(textoEnviado, declarados, {
+        dictamen: resultado.dictamen,
+        puntaje: resultado.puntaje,
+        fecha: resultado.fecha,
+        modeloIA: resultado.modeloIA ?? null,
+      });
     requestAnimationFrame(() => resultadoRef.current?.focus());
   };
 
+  // Borrar solo limpia el editor (no elimina nada del historial) y lo siguiente que se escriba
+  // se guarda como una tutela nueva.
   const borrar = () => {
-    setBorrado({ texto, res });
+    setBorrado({ texto, res, id: historial.id });
     setTexto("");
     setRes(null);
     setAviso("");
+    setAvisoPDF("");
+    setContinuando(null);
+    historial.nueva();
   };
 
   // H7 — atajo para usuarios frecuentes: Ctrl/⌘ + Enter revisa.
@@ -463,9 +543,14 @@ export function RevisionWeb() {
       <FileSearch aria-hidden="true" className="revision-web-icono" />
       <h2 id={`${idTexto}-titulo`}>O revísala aquí mismo</h2>
       <p className="revision-web-intro">
-        Pega el texto de tu tutela y te mostramos al instante qué cumple y qué falta. La revisión se
-        hace en tu navegador: el texto no se envía ni se guarda.
+        Sube el PDF o pega el texto de tu tutela y te mostramos al instante qué cumple y qué falta.
+        La revisión se hace en tu navegador: solo guardamos o enviamos algo si tú lo autorizas.
       </p>
+      {continuando && (
+        <p className="revision-web-continuando" role="status">
+          <strong>Continuando: {continuando.titulo}.</strong> {continuando.detalle}
+        </p>
+      )}
 
       <details className="revision-web-guia">
         <summary>
@@ -481,6 +566,23 @@ export function RevisionWeb() {
           gratis a redactarla.
         </p>
       </details>
+
+      <SubirPDF
+        proveedorDocumentos={proveedorDocumentos}
+        acuerdoDocumentos={acuerdoDocumentos}
+        onAcuerdoDocumentos={() => setAcuerdoDocumentos(true)}
+        onTexto={(t, mensaje) => {
+          if (texto.trim() && texto !== t) setBorrado({ texto, res, id: historial.id });
+          setTexto(t);
+          setAvisoPDF(mensaje);
+          setAviso("");
+        }}
+      />
+      {avisoPDF && (
+        <p role="status" className="revision-web-pdf-ok">
+          <Check aria-hidden="true" /> {avisoPDF}
+        </p>
+      )}
 
       <label htmlFor={idTexto} className="revision-web-label">
         Texto de tu tutela
@@ -509,6 +611,13 @@ export function RevisionWeb() {
           {aviso}
         </p>
       )}
+      <CuestionarioDocumentos
+        valor={declarados}
+        onCambio={setDeclarados}
+        proveedorDocumentos={proveedorDocumentos}
+        acuerdoDocumentos={acuerdoDocumentos}
+        onAcuerdoDocumentos={() => setAcuerdoDocumentos(true)}
+      />
       {proveedorIA && (
         <div className="revision-web-ia">
           <label className="revision-web-ia-opcion">
@@ -556,6 +665,7 @@ export function RevisionWeb() {
           {avisoIA}
         </p>
       )}
+      <GuardarEnHistorial h={historial} />
       <div className="revision-web-acciones">
         <Button
           variant="review"
@@ -581,6 +691,7 @@ export function RevisionWeb() {
             onClick={() => {
               setTexto(borrado.texto);
               setRes(borrado.res);
+              historial.setId(borrado.id);
               setBorrado(null);
             }}
           >
@@ -589,7 +700,17 @@ export function RevisionWeb() {
         )}
       </div>
       <div ref={resultadoRef} tabIndex={-1} aria-live="polite" className="revision-web-resultado">
-        {res && <Resultado res={res} desactualizado={texto !== textoRevisado} />}
+        {res && (
+          <Resultado
+            res={res}
+            desactualizado={texto !== textoRevisado || declarados !== declaradosRevisados}
+            anexos={
+              declaradosRevisados
+                ? listaAnexos(declaradosRevisados, extraerHeuristico(textoRevisado))
+                : null
+            }
+          />
+        )}
       </div>
     </section>
   );

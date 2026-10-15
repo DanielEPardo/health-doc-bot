@@ -208,6 +208,45 @@ export interface ContextoValidacion {
    * es un umbral orientativo del sistema para pedir que se justifique la demora.
    */
   mesesAlertaInmediatez: number;
+  /** Lo que la persona dijo sobre sus documentos (cuestionario). Sin esto, las reglas D## no se evalúan. */
+  documentos?: DocumentosEvaluados | undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Documentos declarados (cuestionario: se pregunta por ellos sin recibirlos)
+// ---------------------------------------------------------------------------
+
+export type RespuestaSiNo = "si" | "no" | "no_se";
+
+export type RespuestaEPS =
+  | "negacion_escrita"
+  | "negacion_verbal"
+  | "sin_respuesta"
+  | "autorizo_sin_entregar"
+  | "no_he_pedido"
+  | "no_se";
+
+export interface DocumentosDeclarados {
+  /** ¿Tiene la orden o fórmula del médico tratante? */
+  ordenMedica: RespuestaSiNo;
+  /** Fecha de la orden (AAAA-MM-DD). */
+  fechaOrden?: string | null | undefined;
+  /** Qué ordenó el médico, en palabras de la persona ("resonancia de rodilla"). */
+  servicioOrdenado?: string | null | undefined;
+  /** Qué hizo la EPS con la solicitud. */
+  respuestaEPS: RespuestaEPS;
+  /** Fecha de la solicitud a la EPS o de su respuesta (AAAA-MM-DD). */
+  fechaRespuestaEPS?: string | null | undefined;
+  /** ¿Tiene exámenes o historia clínica que muestren la necesidad o la urgencia? */
+  soportesClinicos: RespuestaSiNo;
+  /** ¿Tiene copia del documento de identidad? */
+  documentoIdentidad: RespuestaSiNo;
+}
+
+/** Declaraciones + datos calculados con el texto de la tutela (ver documentos.ts → prepararDocumentos). */
+export interface DocumentosEvaluados extends DocumentosDeclarados {
+  /** ¿Lo que ordenó el médico aparece en la tutela? null si no se indicó qué ordenó. */
+  servicioEnTutela: boolean | null;
 }
 
 export interface ResultadoRegla {

@@ -24,5 +24,5 @@ function ReadyForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
 }
 export function AuthScreen({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const ready = useClerkReady();
-  return <main className="auth-page"><p className="section-kicker">Tu revisión empieza aquí</p><h1>{mode === 'sign-up' ? 'Crea tu cuenta' : 'Ingresa a tu cuenta'}</h1><p>Solo necesitas tu celular o tu cuenta de Google. No te pedimos documentos ni datos de salud.</p>{ready ? <ReadyForm mode={mode} /> : <EstadoIngreso />}<p className="cta-note">Es una revisión orientativa, no reemplaza a un abogado.</p></main>;
+  return <main className="auth-page"><p className="section-kicker">Tu revisión empieza aquí</p><h1>{mode === 'sign-up' ? 'Crea tu cuenta' : 'Ingresa a tu cuenta'}</h1><p>Solo necesitas tu celular o tu cuenta de Google. No te pedimos documentos ni datos de salud.</p>{ready ? <ReadyForm mode={mode} /> : <EstadoIngreso />}{mode === 'sign-up' && <p className="auth-legal">Al crear tu cuenta aceptas los <Link to="/terminos" className="text-link">Términos y condiciones</Link> y la <Link to="/politica-de-datos" className="text-link">Política de tratamiento de datos</Link>. Te pediremos confirmarlo con una casilla al entrar.</p>}<p className="cta-note">Es una revisión orientativa, no reemplaza a un abogado.</p></main>;
 }

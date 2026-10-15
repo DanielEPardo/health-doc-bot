@@ -2,6 +2,8 @@
  * Canal Twilio (WhatsApp Sandbox) para el mismo bot de TuTelaGanas.
  * Reutiliza procesarMensaje y el almacén; solo cambia cómo llegan y salen los mensajes.
  * Ruta: src/routes/api/public/twilio/whatsapp.ts. Cada POST se autentica con X-Twilio-Signature.
+ * Si la persona envía su tutela en PDF, se descarga de MediaUrl0 con autenticación básica
+ * (TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN) y se extrae el texto en el servidor.
  */
 import { procesarMensaje, type Almacen, type ConfigBot } from "./bot.server";
 import { proveedorIADesdeEntorno } from "@/lib/validador/servidor.server";
@@ -21,6 +23,10 @@ export interface ConfigTwilio {
   urlWebhook?: string;
   /** Inyectable en pruebas. */
   enviar?: (para: string, cuerpo: string) => Promise<void>;
+  /** Account SID (AC…): junto con authToken permite descargar los archivos que envía la persona. */
+  accountSid?: string;
+  /** Inyectable en pruebas (descarga de PDF). */
+  fetch?: typeof fetch;
 }
 
 export function configTwilioDesdeEntorno(almacen: Almacen): ConfigTwilio {
@@ -47,6 +53,7 @@ export function configTwilioDesdeEntorno(almacen: Almacen): ConfigTwilio {
     lovableApiKey: req("LOVABLE_API_KEY"),
     twilioApiKey: req("TWILIO_API_KEY"),
     ...(process.env["TWILIO_WEBHOOK_URL"] ? { urlWebhook: process.env["TWILIO_WEBHOOK_URL"] } : {}),
+    ...(process.env["TWILIO_ACCOUNT_SID"] ? { accountSid: process.env["TWILIO_ACCOUNT_SID"] } : {}),
   };
 }
 
@@ -95,6 +102,27 @@ export function partir(texto: string, limite = LIMITE_TWILIO): string[] {
   return partes;
 }
 
+/** Descarga un archivo recibido (MediaUrl0). Solo acepta URLs de la API de Twilio. */
+export async function descargarMediaTwilio(
+  cfg: ConfigTwilio,
+  url: string,
+  maxBytes: number,
+): Promise<Uint8Array> {
+  if (!cfg.accountSid) throw new Error("falta TWILIO_ACCOUNT_SID para descargar archivos");
+  const destino = new URL(url);
+  if (destino.protocol !== "https:" || !/(^|\.)twilio\.com$/.test(destino.hostname))
+    throw new Error("URL de archivo no es de Twilio");
+  const r = await (cfg.fetch ?? fetch)(destino, {
+    headers: { Authorization: `Basic ${btoa(`${cfg.accountSid}:${cfg.authToken}`)}` },
+  });
+  if (!r.ok) throw new Error(`twilio media ${r.status}`);
+  if (Number(r.headers.get("content-length") ?? 0) > maxBytes)
+    throw new Error("PDF demasiado grande");
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  if (bytes.byteLength > maxBytes) throw new Error("PDF demasiado grande");
+  return bytes;
+}
+
 async function enviarPorGateway(cfg: ConfigTwilio, para: string, cuerpo: string): Promise<void> {
   const r = await fetch(`${GATEWAY_URL}/Messages.json`, {
     method: "POST",
@@ -128,7 +156,17 @@ export async function manejarWebhookTwilio(req: Request, cfg: ConfigTwilio): Pro
     const cuerpo = (params["Body"] ?? "").slice(0, 60000);
     const tieneMedia = Number(params["NumMedia"] ?? "0") > 0;
     const texto = cuerpo.trim() ? cuerpo : tieneMedia ? null : "";
-    const respuestas = await procesarMensaje(cfg.bot, telefono, texto);
+    const urlPDF =
+      tieneMedia && params["MediaContentType0"] === "application/pdf"
+        ? params["MediaUrl0"]
+        : undefined;
+    const leerPDF = urlPDF
+      ? async () => {
+          const { textoDePDF, MAX_BYTES_PDF } = await import("@/lib/pdf");
+          return textoDePDF(await descargarMediaTwilio(cfg, urlPDF, MAX_BYTES_PDF));
+        }
+      : undefined;
+    const respuestas = await procesarMensaje(cfg.bot, telefono, texto, leerPDF);
     const enviar = cfg.enviar ?? ((p: string, c: string) => enviarPorGateway(cfg, p, c));
     for (const r of respuestas) for (const parte of partir(r)) await enviar(de, parte);
   }
