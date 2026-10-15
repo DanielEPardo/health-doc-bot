@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { FileUp, Loader2, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AcuerdoDatos } from "@/components/acuerdo-datos";
@@ -12,6 +12,14 @@ import {
   type RespuestaEPS,
   type RespuestaSiNo,
 } from "@/lib/validador";
+
+type CampoPregunta = "ordenMedica" | "respuestaEPS" | "soportesClinicos" | "documentoIdentidad";
+const CAMPOS: CampoPregunta[] = [
+  "ordenMedica",
+  "respuestaEPS",
+  "soportesClinicos",
+  "documentoIdentidad",
+];
 
 const DECLARADOS_VACIOS: DocumentosDeclarados = {
   ordenMedica: "no_se",
@@ -45,7 +53,8 @@ function Opciones<T extends string>({
   pregunta: string;
   ayuda?: string;
   nombre: string;
-  valor: T;
+  /** null = la persona todavía no responde esta pregunta (ninguna opción marcada). */
+  valor: T | null;
   opciones: { valor: T; texto: string }[];
   onCambio: (v: T) => void;
   children?: ReactNode;
@@ -230,6 +239,21 @@ export function CuestionarioDocumentos({
   const id = useId();
   const d = valor ?? DECLARADOS_VACIOS;
   const cambiar = (c: Partial<DocumentosDeclarados>) => onCambio({ ...d, ...c });
+  // Preguntas que la persona respondió. Las demás se ven sin marcar (aunque internamente valgan
+  // "no_se"); si «No sé» viniera marcado de entrada, elegirlo no registraría ninguna respuesta.
+  const [respondidas, setRespondidas] = useState<Set<CampoPregunta>>(
+    () => new Set(valor ? CAMPOS : []),
+  );
+  useEffect(() => {
+    if (valor === null) setRespondidas(new Set());
+    // Respuestas que llegan de afuera (historial o lectura de documentos): todas cuentan.
+    else setRespondidas((r) => (r.size === 0 ? new Set(CAMPOS) : r));
+  }, [valor]);
+  const responder = <K extends CampoPregunta>(campo: K, v: DocumentosDeclarados[K]) => {
+    setRespondidas((r) => new Set(r).add(campo));
+    cambiar({ [campo]: v } as Partial<DocumentosDeclarados>);
+  };
+  const marcada = <K extends CampoPregunta>(campo: K) => (respondidas.has(campo) ? d[campo] : null);
   const pideFechaEPS = ["negacion_escrita", "sin_respuesta", "autorizo_sin_entregar"].includes(
     d.respuestaEPS,
   );
@@ -249,9 +273,9 @@ export function CuestionarioDocumentos({
         pregunta="1. ¿Tienes la orden o fórmula del médico para lo que pides?"
         ayuda="También sirve la autorización de servicios o el MIPRES."
         nombre={`${id}-orden`}
-        valor={d.ordenMedica}
+        valor={marcada("ordenMedica")}
         opciones={SI_NO}
-        onCambio={(v) => cambiar({ ordenMedica: v })}
+        onCambio={(v) => responder("ordenMedica", v)}
       >
         {d.ordenMedica === "si" && (
           <div className="cuestionario-detalle">
@@ -281,12 +305,12 @@ export function CuestionarioDocumentos({
       <Opciones<RespuestaEPS>
         pregunta="2. ¿Qué hizo la EPS cuando le pediste el servicio?"
         nombre={`${id}-eps`}
-        valor={d.respuestaEPS}
+        valor={marcada("respuestaEPS")}
         opciones={(Object.keys(ETIQUETA_RESPUESTA_EPS) as RespuestaEPS[]).map((v) => ({
           valor: v,
           texto: ETIQUETA_RESPUESTA_EPS[v],
         }))}
-        onCambio={(v) => cambiar({ respuestaEPS: v })}
+        onCambio={(v) => responder("respuestaEPS", v)}
       >
         {pideFechaEPS && (
           <div className="cuestionario-detalle">
@@ -310,17 +334,17 @@ export function CuestionarioDocumentos({
       <Opciones
         pregunta="3. ¿Tienes exámenes o historia clínica que muestren tu diagnóstico o la urgencia?"
         nombre={`${id}-soportes`}
-        valor={d.soportesClinicos}
+        valor={marcada("soportesClinicos")}
         opciones={SI_NO}
-        onCambio={(v) => cambiar({ soportesClinicos: v })}
+        onCambio={(v) => responder("soportesClinicos", v)}
       />
 
       <Opciones
         pregunta="4. ¿Tienes copia de tu documento de identidad?"
         nombre={`${id}-identidad`}
-        valor={d.documentoIdentidad}
+        valor={marcada("documentoIdentidad")}
         opciones={SI_NO}
-        onCambio={(v) => cambiar({ documentoIdentidad: v })}
+        onCambio={(v) => responder("documentoIdentidad", v)}
       />
 
       {valor !== null && (

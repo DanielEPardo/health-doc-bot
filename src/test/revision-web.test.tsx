@@ -101,3 +101,27 @@ describe("Revisión en la web — documentos y PDF", () => {
     expect(await screen.findByText(/no es un PDF/)).toBeInTheDocument();
   });
 });
+
+describe("Cuestionario de documentos — respuestas", () => {
+  it("las preguntas sin responder no vienen marcadas y elegir «No sé» sí cuenta como respuesta", () => {
+    render(<RevisionWeb />);
+    fireEvent.click(screen.getByText(/Cuéntanos sobre tus documentos/));
+    const orden = screen.getByRole("group", { name: /orden o fórmula del médico/ });
+    for (const opcion of within(orden).getAllByRole("radio")) expect(opcion).not.toBeChecked();
+    fireEvent.click(within(orden).getByLabelText("No sé"));
+    expect(within(orden).getByLabelText("No sé")).toBeChecked();
+    const eps = screen.getByRole("group", { name: /Qué hizo la EPS/ });
+    for (const opcion of within(eps).getAllByRole("radio")) expect(opcion).not.toBeChecked();
+    fireEvent.change(screen.getByLabelText("Texto de tu tutela"), {
+      target: {
+        value: readFileSync(
+          path.join(process.cwd(), "src/test/fixtures/tutela-incompleta.txt"),
+          "utf8",
+        ),
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    expect(screen.getByText("Tu orden médica")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Documentos para adjuntar/ })).toBeInTheDocument();
+  });
+});

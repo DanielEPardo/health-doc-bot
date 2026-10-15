@@ -46,7 +46,7 @@ describe("Bot de WhatsApp", () => {
     await procesarMensaje(c, tel, TUTELA.slice(mitad));
     const reporte = await procesarMensaje(c, tel, "revisar");
     expect(reporte[0]).toContain("Puntaje orientativo");
-    expect(reporte.join("\n")).toContain("orden médica que tienes"); // usa las respuestas (D01)
+    expect(reporte.join("\n")).toContain("Tu orden médica"); // usa las respuestas (D01)
     expect((await almacen.obtener(tel))?.buffer).toBe("");
     const guardado = JSON.stringify(almacen.revisiones);
     for (const dato of ["43555123", "43.555.123", "Ríos", "artrosis", "mariaf.rios"])
