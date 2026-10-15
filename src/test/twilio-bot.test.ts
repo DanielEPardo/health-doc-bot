@@ -1,4 +1,6 @@
 import { createHmac } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { AlmacenMemoria } from "@/lib/whatsapp/bot.server";
 import {
@@ -7,6 +9,7 @@ import {
   partir,
   type ConfigTwilio,
 } from "@/lib/whatsapp/twilio.server";
+import { crearPDF } from "./pdf-ayuda";
 
 const URL_HOOK = "https://x.app/api/public/twilio/whatsapp";
 const TOKEN = "token-prueba";
@@ -65,5 +68,72 @@ describe("Webhook de Twilio", () => {
     const partes = partir("a ".repeat(2000));
     expect(partes.length).toBeGreaterThan(1);
     for (const p of partes) expect(p.length).toBeLessThanOrEqual(1500);
+  });
+});
+
+describe("Twilio — tutela en PDF", () => {
+  const TUTELA = readFileSync(
+    path.join(process.cwd(), "src/test/fixtures/tutela-completa.txt"),
+    "utf8",
+  );
+  const pdf = crearPDF(TUTELA.split("\n"));
+  const MEDIA = "https://api.twilio.com/2010-04-01/Accounts/AC1/Messages/MM1/Media/ME1";
+  const base = { From: "whatsapp:+573001112233" };
+  const texto = (sid: string, Body: string) => ({ ...base, MessageSid: sid, Body });
+  const conPDF = (sid: string, url = MEDIA) => ({
+    ...base,
+    MessageSid: sid,
+    Body: "",
+    NumMedia: "1",
+    MediaUrl0: url,
+    MediaContentType0: "application/pdf",
+  });
+
+  async function preparar(c: ConfigTwilio, enviados: string[][]) {
+    for (const [sid, t] of [
+      ["S1", "Hola"],
+      ["S2", "ACEPTO"],
+      ["S3", "OMITIR"],
+    ] as const)
+      await manejarWebhookTwilio(peticion(texto(sid, t)), c);
+    enviados.length = 0;
+  }
+
+  it("descarga el PDF con autenticación básica, lo lee y lo revisa", async () => {
+    const enviados: string[][] = [];
+    let auth = "";
+    const c: ConfigTwilio = {
+      ...cfg(enviados),
+      accountSid: "AC1",
+      fetch: (async (_url: URL, init?: RequestInit) => {
+        auth = new Headers(init?.headers).get("authorization") ?? "";
+        return new Response(pdf.slice().buffer);
+      }) as unknown as typeof fetch,
+    };
+    await preparar(c, enviados);
+    await manejarWebhookTwilio(peticion(conPDF("S4")), c);
+    expect(auth).toBe(`Basic ${btoa(`AC1:${TOKEN}`)}`);
+    expect(enviados[0]?.[1]).toContain("Leí tu PDF (1 página)");
+    await manejarWebhookTwilio(peticion(texto("S5", "REVISAR")), c);
+    expect(enviados.map((e) => e[1]).join("\n")).toContain("Puntaje orientativo");
+  });
+
+  it("sin TWILIO_ACCOUNT_SID o con una URL que no es de Twilio, no descarga y avisa", async () => {
+    const enviados: string[][] = [];
+    let descargas = 0;
+    const fetchFalso = (async () => {
+      descargas++;
+      return new Response(pdf.slice().buffer);
+    }) as unknown as typeof fetch;
+    const sinSid: ConfigTwilio = { ...cfg(enviados), fetch: fetchFalso };
+    await preparar(sinSid, enviados);
+    await manejarWebhookTwilio(peticion(conPDF("S4")), sinSid);
+    expect(enviados[0]?.[1]).toContain("No pude abrir ese PDF");
+
+    const otraUrl: ConfigTwilio = { ...cfg(enviados), accountSid: "AC1", fetch: fetchFalso };
+    await preparar(otraUrl, enviados);
+    await manejarWebhookTwilio(peticion(conPDF("S9", "https://evil.example.com/x.pdf")), otraUrl);
+    expect(enviados[0]?.[1]).toContain("No pude abrir ese PDF");
+    expect(descargas).toBe(0);
   });
 });

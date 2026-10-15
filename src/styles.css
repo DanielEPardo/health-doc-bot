@@ -316,6 +316,123 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
 .prioridad-media { background:color-mix(in oklch, oklch(0.75 0.15 75) 18%, transparent); color:oklch(0.5 0.12 70); }
 .resultado-descargo { display:flex; gap:10px; align-items:flex-start; font-size:15px; color:var(--muted-foreground); border-top:1px solid var(--border); padding-top:18px; }
 .resultado-descargo svg { flex-shrink:0; width:18px; height:18px; margin-top:3px; }
+/* Documentos, PDF, acuerdos e historial */
+.subir-pdf { display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin-bottom:18px; }
+.subir-pdf-nota { font-size:15px; color:var(--muted-foreground); }
+.subir-pdf-escaneado { flex-basis:100%; padding:14px 16px; border-radius:8px; background:var(--secondary); display:grid; gap:12px; }
+.revision-web-pdf-ok { display:flex; gap:8px; align-items:flex-start; margin:-6px 0 16px; font-size:16px; color:var(--primary); }
+.revision-web-pdf-ok svg { flex-shrink:0; width:18px; height:18px; margin-top:3px; }
+.revision-web-continuando { padding:12px 16px; margin-bottom:18px; border-radius:8px; background:var(--secondary); border-left:4px solid var(--primary); }
+.cuestionario { margin-top:20px; border:1px solid var(--border); border-radius:8px; padding:14px 18px; }
+.cuestionario summary { cursor:pointer; font-weight:600; display:flex; align-items:center; gap:10px; color:var(--primary); }
+.cuestionario summary svg { width:20px; height:20px; flex-shrink:0; }
+.cuestionario-etiqueta { font-size:13px; font-weight:600; padding:2px 8px; border-radius:999px; background:var(--secondary); color:var(--primary); }
+.cuestionario-intro { margin:12px 0 4px; font-size:16px; color:var(--muted-foreground); }
+.cuestionario-pregunta { margin-top:18px; border:0; padding:0; }
+.cuestionario-pregunta legend { font-weight:600; margin-bottom:8px; }
+.cuestionario-ayuda { font-size:15px; color:var(--muted-foreground); margin:-4px 0 8px; }
+.cuestionario-opciones { display:flex; flex-wrap:wrap; gap:8px 18px; }
+.cuestionario-opcion { display:flex; gap:8px; align-items:center; cursor:pointer; min-height:32px; }
+.cuestionario-opcion input { width:18px; height:18px; accent-color:var(--primary); flex-shrink:0; }
+.cuestionario-detalle { display:grid; gap:12px; margin-top:12px; padding-left:14px; border-left:3px solid var(--border); }
+.cuestionario-detalle label { display:grid; gap:4px; font-size:16px; }
+.cuestionario-detalle input { min-height:40px; padding:6px 10px; border:1px solid var(--input); border-radius:6px; background:var(--background); max-width:420px; }
+.cuestionario > .cuestionario-pregunta:last-of-type + button { margin-top:14px; }
+.documentos-ia { margin-top:20px; padding-top:16px; border-top:1px dashed var(--border); display:grid; gap:10px; justify-items:start; }
+.documentos-ia-archivo { font-size:16px; max-width:100%; }
+.documentos-ia-leidos ul { display:grid; gap:6px; margin-top:8px; font-size:16px; }
+.documentos-ia-leidos li { display:flex; gap:8px; align-items:flex-start; }
+.documentos-ia-leidos svg { flex-shrink:0; width:18px; height:18px; margin-top:3px; color:var(--primary); }
+.documentos-ia-nombre { font-weight:600; word-break:break-all; }
+.acuerdo { margin-top:16px; padding:16px 18px; border:1px solid var(--primary); border-radius:8px; background:var(--background); display:grid; gap:12px; }
+.acuerdo-titulo { display:flex; gap:8px; align-items:center; font-weight:700; }
+.acuerdo-titulo svg { width:20px; height:20px; color:var(--primary); flex-shrink:0; }
+.acuerdo-puntos { list-style:disc; padding-left:22px; display:grid; gap:6px; font-size:16px; line-height:1.5; }
+.acuerdo-casilla { display:flex; gap:10px; align-items:flex-start; font-weight:600; cursor:pointer; }
+.acuerdo-casilla input { width:20px; height:20px; margin-top:3px; accent-color:var(--primary); flex-shrink:0; }
+.acuerdo-acciones { display:flex; flex-wrap:wrap; gap:10px; }
+.historial-guardar { margin-top:18px; padding:14px 18px; border:1px solid var(--border); border-radius:8px; display:grid; gap:10px; justify-items:start; }
+.historial-guardar > p { display:flex; gap:8px; align-items:flex-start; }
+.historial-guardar > p svg { width:20px; height:20px; flex-shrink:0; margin-top:3px; color:var(--primary); }
+.historial-estado { display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:15px; color:var(--muted-foreground); margin-left:32px; }
+.historial-estado svg { width:16px; height:16px; }
+.lista-anexos ul { display:grid; gap:12px; margin-top:10px; }
+.lista-anexos li { display:grid; grid-template-columns:20px 1fr; column-gap:12px; }
+.lista-anexos-nota { font-size:15px; color:var(--muted-foreground); }
+.lista-anexos-documento { font-weight:600; }
+.lista-anexos-estado { font-size:13px; font-weight:600; padding:2px 8px; border-radius:999px; background:var(--muted); color:var(--muted-foreground); white-space:nowrap; }
+.anexo-tienes { background:var(--secondary); color:var(--primary); }
+.anexo-conseguir { background:color-mix(in oklch, var(--destructive) 14%, transparent); color:var(--destructive); }
+.lista-anexos-detalle { font-size:16px; color:var(--muted-foreground); }
+.cuenta-acciones { display:flex; flex-wrap:wrap; gap:12px; }
+.cuenta-enlace { margin-top:10px; }
+.cuenta-enlace a { display:inline-flex; gap:6px; align-items:center; }
+.cuenta-enlace svg { width:18px; height:18px; }
+.mis-tutelas { text-align:left; }
+.mis-tutelas-seccion { width:100%; max-width:760px; margin-top:36px; }
+.mis-tutelas-seccion h2 { font-size:24px; margin-bottom:4px; }
+.mis-tutelas-ayuda, .mis-tutelas-vacio { color:var(--muted-foreground); }
+.mis-tutelas-vacio { margin-top:28px; }
+.tutelas-lista { display:grid; gap:14px; margin-top:14px; }
+.tutela-tarjeta { display:grid; gap:12px; padding:18px 20px; border:1px solid var(--border); border-radius:8px; background:var(--card); }
+.tutela-tarjeta h3 { font-size:19px; line-height:1.35; }
+.tutela-tarjeta-meta { font-size:15px; color:var(--muted-foreground); }
+.tutela-presentada { font-weight:600; color:var(--primary); }
+.tutela-tarjeta-resultado { font-weight:600; font-size:16px; margin-top:4px; }
+.tutela-tarjeta-resultado.resultado-lista_para_presentar { color:var(--primary); }
+.tutela-tarjeta-resultado.resultado-requiere_ajustes { color:oklch(0.55 0.14 70); }
+.tutela-tarjeta-resultado.resultado-incompleta { color:var(--destructive); }
+.tutela-tarjeta-acciones { display:flex; flex-wrap:wrap; gap:8px; }
+.mis-tutelas-borrar-todo { margin-top:36px; color:var(--destructive); }
+/* Perfil */
+.header-acciones { display:flex; align-items:center; gap:14px; flex-shrink:0; }
+.cuenta-avatar { width:42px; height:42px; }
+.cuenta-boton { border-radius:999px; outline-offset:3px; }
+.cuenta-boton:focus-visible { outline:3px solid var(--ring); }
+.perfil { max-width:none; }
+/* En celular, con sesión iniciada el botón «Revisar mi tutela» no cabe junto al ícono: queda en el menú. */
+@media (max-width:560px) { .header-acciones:has(.cuenta-menu) .header-cta { display:none; } }
+.perfil > p:not(.section-kicker) { margin-bottom:24px; }
+.perfil-pestana { display:grid; gap:14px; text-align:left; }
+.perfil-pestana h2 { font-size:22px; }
+.perfil-pestana h3 { font-size:18px; margin-top:8px; }
+.perfil-texto { font-size:16px; color:var(--muted-foreground); }
+.perfil-tutelas { display:grid; gap:10px; }
+.perfil-tutelas li { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; padding-bottom:10px; border-bottom:1px solid var(--border); font-size:16px; }
+.perfil-tutela-estado { font-size:14px; color:var(--muted-foreground); }
+.perfil-acciones { display:flex; flex-wrap:wrap; gap:10px; }
+.perfil-autorizaciones { display:grid; gap:12px; }
+.perfil-autorizaciones li { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; border:1px solid var(--border); border-radius:8px; }
+.perfil-autorizacion-titulo { font-weight:600; }
+/* Páginas legales, aviso de cookies y aceptación de términos */
+.legal-vigencia { color:var(--muted-foreground); font-size:16px; margin-top:-12px; }
+.legal-indice { margin:8px 0 12px; padding:16px 20px; border:1px solid var(--border); border-radius:8px; background:var(--secondary); }
+.legal-indice > p { font-weight:700; margin-bottom:8px !important; }
+.legal-indice ol { list-style:decimal; padding-left:22px; display:grid; gap:4px; }
+.legal section { scroll-margin-top:24px; }
+.legal-lista { list-style:disc; padding-left:22px; display:grid; gap:8px; margin-bottom:18px; line-height:1.55; }
+.legal-pendiente { background:color-mix(in oklch, oklch(0.75 0.15 75) 35%, transparent); color:var(--foreground); padding:0 4px; border-radius:4px; }
+.legal-pie { margin-top:40px; padding-top:20px; border-top:1px solid var(--border); }
+.legal-tabla-contenedor { overflow-x:auto; margin-bottom:18px; }
+.legal-tabla { width:100%; border-collapse:collapse; font-size:16px; min-width:560px; }
+.legal-tabla th, .legal-tabla td { text-align:left; vertical-align:top; padding:10px 12px; border-bottom:1px solid var(--border); }
+.legal-tabla thead th { background:var(--secondary); }
+.legal-tabla tbody th { font-weight:600; word-break:break-word; }
+@media (max-width:640px) {
+ .legal-tabla { min-width:0; }
+ .legal-tabla thead { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+ .legal-tabla, .legal-tabla tbody, .legal-tabla tr, .legal-tabla th, .legal-tabla td { display:block; }
+ .legal-tabla tr { padding:12px 0; border-bottom:1px solid var(--border); }
+ .legal-tabla th, .legal-tabla td { border:0; padding:2px 0; }
+ .legal-tabla td::before { content:attr(data-etiqueta) ": "; font-weight:600; }
+}
+.footer-legal { display:flex; flex-wrap:wrap; gap:8px 20px; }
+.auth-legal { font-size:15px; color:var(--muted-foreground); max-width:460px; margin-top:16px; }
+.aviso-cookies { position:fixed; z-index:40; left:16px; right:16px; bottom:16px; max-width:720px; margin-inline:auto; display:flex; align-items:center; gap:14px; padding:14px 18px; border:1px solid var(--border); border-radius:10px; background:var(--card); color:var(--card-foreground); box-shadow:0 8px 30px rgb(0 0 0 / 0.12); font-size:16px; }
+.aviso-cookies p { flex:1; }
+.aviso-cookies-icono { width:22px; height:22px; flex-shrink:0; color:var(--primary); }
+.terminos-titulo { display:flex; gap:8px; align-items:center; }
+.terminos-titulo svg { width:22px; height:22px; color:var(--primary); }
 @media (max-width:767px) {
  .content-width { width:calc(100% - 40px); }
  .site-header { height:76px; }
@@ -323,6 +440,8 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
  .brand-mark { width:30px; height:33px; }
  .header-cta .review-button { min-height:44px; padding:8px 14px; font-size:18px; }
  .header-cta .review-button svg { display:none; }
+ .header-acciones { gap:10px; }
+ .cuenta-avatar { width:38px; height:38px; }
  .hero { min-height:650px; align-items:flex-start; }
  .hero-photo { object-position:70% center; opacity:0.18; }
  .hero::after { background:var(--hero-wash); opacity:0.64; }
@@ -348,6 +467,8 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
  .review-section .intro { max-width:none; }
  .faq-trigger { font-size:19px; }
  .footer-inner { flex-direction:column; align-items:flex-start; gap:17px; }
+ .footer-legal { flex-direction:column; }
+ .aviso-cookies { flex-wrap:wrap; left:12px; right:12px; bottom:12px; }
  .auth-page { padding-inline:20px; }
  .policy h1 { font-size:31px; }
  .revision-web h2 { font-size:24px; }

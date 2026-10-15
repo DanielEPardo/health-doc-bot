@@ -8,11 +8,13 @@
  */
 import {
   combinarExtracciones,
+  contextoDocumentos,
   evaluar,
   extraerHeuristico,
   validarTexto,
   type AnalisisJuridicoIA,
   type ContextoValidacion,
+  type DocumentosDeclarados,
   type ResultadoRegla,
   type ResultadoValidacion,
   type TutelaExtraida,
@@ -29,6 +31,8 @@ export interface OpcionesValidacion extends Partial<ContextoValidacion> {
   /** Variables de entorno (inyectable para pruebas). */
   entorno?: Entorno;
   fetch?: typeof fetch;
+  /** Respuestas del cuestionario de documentos. */
+  declarados?: DocumentosDeclarados | null | undefined;
 }
 
 /**
@@ -129,7 +133,8 @@ export async function validarTutela(
   texto: string,
   opciones: OpcionesValidacion = {},
 ): Promise<ResultadoValidacion> {
-  const { ia, entorno, fetch: f, ...ctx } = opciones;
+  const { ia, entorno, fetch: f, declarados, ...resto } = opciones;
+  const ctx = { ...resto, ...contextoDocumentos(texto, declarados) };
   if (!ia) return validarTexto(texto, ctx);
   const env = entorno ?? process.env;
   const local = extraerHeuristico(texto);

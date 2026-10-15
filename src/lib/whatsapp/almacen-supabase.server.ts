@@ -3,6 +3,7 @@
  * Tablas: supabase/migrations/20261009120000_bot_whatsapp_tutelas.sql (RLS activo, sin acceso desde el navegador).
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DocumentosDeclarados } from "@/lib/validador";
 import type { Almacen, Conversacion, EstadoConversacion, ResumenRevision } from "./bot.server";
 
 // Las tablas aún no están en los tipos generados (src/integrations/supabase/types.ts);
@@ -24,7 +25,7 @@ export class AlmacenSupabase implements Almacen {
   async obtener(telefono: string): Promise<Conversacion | null> {
     const { data, error } = await this.db
       .from("conversaciones")
-      .select("telefono, estado, buffer, actualizado")
+      .select("telefono, estado, buffer, documentos, actualizado")
       .eq("telefono", telefono)
       .maybeSingle();
     AlmacenSupabase.revisar(error, "obtener");
@@ -33,6 +34,7 @@ export class AlmacenSupabase implements Almacen {
       telefono: string;
       estado: EstadoConversacion;
       buffer: string;
+      documentos: DocumentosDeclarados | null;
       actualizado: string;
     };
     return { ...fila, actualizado: new Date(fila.actualizado) };
@@ -44,6 +46,7 @@ export class AlmacenSupabase implements Almacen {
         telefono: c.telefono,
         estado: c.estado,
         buffer: c.buffer,
+        documentos: c.documentos ?? null,
         actualizado: new Date().toISOString(),
       },
       { onConflict: "telefono" },

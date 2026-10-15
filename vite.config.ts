@@ -12,4 +12,7 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Solo afecta al servidor de desarrollo: permite probar el webhook de WhatsApp en local
+  // a través de un túnel (cloudflared o ngrok). Ver INTEGRACION.md → "Probar el bot en local".
+  vite: { server: { allowedHosts: [".trycloudflare.com", ".ngrok-free.app"] } },
 });

@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import type { ResultadoValidacion } from "@/lib/validador";
+import type { DocumentosDeclarados, ResultadoValidacion } from "@/lib/validador";
 
 /*
  * Revisión con IA desde la web (/revision). Los módulos de servidor se importan dentro de los
@@ -14,39 +14,31 @@ export const getEstadoIA = createServerFn({ method: "GET" }).handler(async () =>
   return { proveedor: proveedorIADesdeEntorno() };
 });
 
-// Límite simple por usuario (por instancia del servidor) para no agotar la cuota gratuita de Gemini.
-const LIMITE_POR_MINUTO = 5;
-const usos = new Map<string, number[]>();
-function dentroDelLimite(userId: string): boolean {
-  const ahora = Date.now();
-  const recientes = (usos.get(userId) ?? []).filter((t) => ahora - t < 60_000);
-  if (recientes.length >= LIMITE_POR_MINUTO) return false;
-  usos.set(userId, [...recientes, ahora]);
-  return true;
-}
+// Límite por usuario para no agotar la cuota gratuita de Gemini (se crea al primer uso, en el servidor).
+let dentroDelLimite: ((usuario: string) => boolean) | undefined;
 
 export const revisarConIA = createServerFn({ method: "POST" })
-  .inputValidator((data: { texto: string; autorizaIA: boolean }) => {
-    if (typeof data?.texto !== "string" || data.texto.trim().length < 300)
-      throw new Error("El texto es muy corto para ser una tutela.");
-    if (data.texto.length > 60_000) throw new Error("El texto es demasiado largo.");
-    if (data.autorizaIA !== true) throw new Error("Falta tu autorización para el análisis con IA.");
-    return { texto: data.texto, autorizaIA: true as const };
-  })
+  .inputValidator(
+    (data: { texto: string; autorizaIA: boolean; declarados?: DocumentosDeclarados | null }) => {
+      if (typeof data?.texto !== "string" || data.texto.trim().length < 300)
+        throw new Error("El texto es muy corto para ser una tutela.");
+      if (data.texto.length > 60_000) throw new Error("El texto es demasiado largo.");
+      if (data.autorizaIA !== true)
+        throw new Error("Falta tu autorización para el análisis con IA.");
+      return { texto: data.texto, autorizaIA: true as const, declarados: data.declarados ?? null };
+    },
+  )
   .handler(async ({ data }): Promise<ResultadoPublico> => {
-    const { getRequest } = await import("@tanstack/react-start/server");
-    const { verificarSesionClerk } = await import("@/lib/clerk-verificar.server");
+    const { usuarioDeLaSolicitud, crearLimitador } = await import("@/lib/sesion.server");
     const { proveedorIADesdeEntorno, validarTutela } =
       await import("@/lib/validador/servidor.server");
+    const { normalizarDeclarados } = await import("@/lib/validador");
 
-    const token = /^Bearer (.+)$/.exec(getRequest()?.headers.get("authorization") ?? "")?.[1];
-    if (!token) throw new Error("Debes iniciar sesión para usar el análisis con IA.");
-    const sesion = await verificarSesionClerk(
-      token,
-      process.env["CLERK_PUBLISHABLE_KEY"] ?? "",
-    ).catch(() => null);
-    if (!sesion) throw new Error("Tu sesión no es válida o venció. Vuelve a iniciar sesión.");
-    if (!dentroDelLimite(sesion.userId))
+    const usuario = await usuarioDeLaSolicitud().catch((e: Error) => {
+      throw new Error(`${e.message.replace(/\.$/, "")} para usar el análisis con IA.`);
+    });
+    dentroDelLimite ??= crearLimitador(5, 60_000);
+    if (!dentroDelLimite(usuario))
       throw new Error("Hiciste muchas revisiones seguidas. Espera un minuto e inténtalo de nuevo.");
 
     const proveedor = proveedorIADesdeEntorno();
@@ -54,6 +46,7 @@ export const revisarConIA = createServerFn({ method: "POST" })
     // El texto no se guarda: se anonimiza, se analiza y se descarta.
     const { extraccion: _noSeDevuelve, ...publico } = await validarTutela(data.texto, {
       ia: proveedor,
+      declarados: normalizarDeclarados(data.declarados),
     });
     return publico;
   });

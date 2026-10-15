@@ -28,7 +28,7 @@ const faqs = [
 function Index() {
   return <main>
     <section className="hero" aria-labelledby="hero-title">
-      <img className="hero-photo" src={hero} width={1600} height={1008} fetchPriority="high" alt="Una mujer revisa sus documentos con su celular a mano." />
+      <img className="hero-photo" src={hero} width={1600} height={1008} fetchPriority="high" alt="Mujer sentada en una mesa lee un documento en papel mientras sostiene su celular." />
       <div className="content-width hero-content"><div className="hero-copy">
         <p className="eyebrow"><ShieldCheck size={20} aria-hidden="true" /> Tu derecho a la salud, con más claridad</p>
         <h1 id="hero-title">Antes de presentar tu tutela, revisa que no le falte nada</h1>

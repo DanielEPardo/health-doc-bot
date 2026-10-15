@@ -13,3 +13,17 @@ Documentación jurídica y técnica del validador integrado en TuTelaGanas. El c
 | [Fuentes](fuentes.md) | Bibliografía completa con enlaces oficiales |
 
 La guía para poner en marcha el bot está en [INTEGRACION.md](../../INTEGRACION.md).
+
+## Reglas del cuestionario de documentos (D01–D05)
+
+Se evalúan solo si la persona responde las preguntas sobre sus documentos (sin enviarlos). Comparan lo que dice tener con el texto de la tutela:
+
+| Regla | Qué revisa | Fundamento |
+|---|---|---|
+| D01 | Tiene la orden médica y la tutela la menciona (o al revés) | T-760 de 2008; SU-508 de 2020 |
+| D02 | Lo que se pide coincide con lo que ordenó el médico | T-760 de 2008; SU-508 de 2020 |
+| D03 | Qué respondió la EPS y cómo se prueba (negación escrita/verbal, silencio y plazo de 15 días hábiles, autorización sin entrega, sin solicitud previa) | Decreto 2591 art. 5; SU-508 de 2020; Ley 1755 de 2015 |
+| D04 | Fechas de los documentos (inmediatez) y que estén en los hechos | SU-961 de 1999 |
+| D05 | Documentos por relacionar en «Pruebas y anexos» o por conseguir | Decreto 2591 art. 14 |
+
+Código: `src/lib/validador/documentos.ts` y `src/lib/validador/reglas/documentos.ts`.

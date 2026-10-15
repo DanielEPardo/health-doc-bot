@@ -2,6 +2,8 @@
  * Canal Evolution API (WhatsApp por código QR, número colombiano real) para el mismo bot.
  * Reutiliza procesarMensaje y el almacén. Ruta: src/routes/api/public/whatsapp/evolution.ts.
  * Cada POST se autentica con un token secreto compartido (?token=… o cabecera x-webhook-token).
+ * Si la persona envía su tutela en PDF, se pide el archivo a Evolution (getBase64FromMediaMessage)
+ * y se extrae el texto en el servidor; el webhook solo trae los datos del mensaje, no el archivo.
  */
 import { procesarMensaje, type Almacen, type ConfigBot } from "./bot.server";
 import { proveedorIADesdeEntorno } from "@/lib/validador/servidor.server";
@@ -14,6 +16,8 @@ export interface ConfigEvolution {
   instancia: string;
   tokenWebhook: string;
   enviar?: (numero: string, texto: string) => Promise<void>;
+  /** Inyectable en pruebas (descarga de PDF). */
+  fetch?: typeof fetch;
 }
 
 export function configEvolutionDesdeEntorno(almacen: Almacen): ConfigEvolution {
@@ -48,15 +52,40 @@ function igualSeguro(a: string, b: string): boolean {
   return d === 0;
 }
 
-interface MensajeEvolution {
+export interface MensajeEvolution {
   key?: { remoteJid?: string; fromMe?: boolean; id?: string };
   message?: {
     conversation?: string;
     extendedTextMessage?: { text?: string };
-    documentMessage?: unknown;
+    documentMessage?: { mimetype?: string; fileName?: string };
     imageMessage?: unknown;
     audioMessage?: unknown;
   };
+}
+
+const esPDF = (d: { mimetype?: string; fileName?: string } | undefined) =>
+  !!d && (d.mimetype === "application/pdf" || /\.pdf$/i.test(d.fileName ?? ""));
+
+/** Pide a Evolution el archivo de un mensaje (WhatsApp lo entrega cifrado; Evolution lo descifra). */
+export async function descargarPDFEvolution(
+  cfg: ConfigEvolution,
+  m: MensajeEvolution,
+  maxBytes: number,
+): Promise<Uint8Array> {
+  const r = await (cfg.fetch ?? fetch)(
+    `${cfg.apiUrl}/chat/getBase64FromMediaMessage/${encodeURIComponent(cfg.instancia)}`,
+    {
+      method: "POST",
+      headers: { apikey: cfg.apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ message: { key: m.key, message: m.message }, convertToMp4: false }),
+    },
+  );
+  if (!r.ok) throw new Error(`evolution media ${r.status}`);
+  const { base64 } = (await r.json()) as { base64?: string };
+  const limpio = (base64 ?? "").replace(/^data:[^,]*,/, "");
+  if (!limpio) throw new Error("evolution media sin contenido");
+  if (Math.floor((limpio.length * 3) / 4) > maxBytes) throw new Error("PDF demasiado grande");
+  return Uint8Array.from(atob(limpio), (c) => c.charCodeAt(0));
 }
 
 async function enviarPorEvolution(cfg: ConfigEvolution, numero: string, texto: string) {
@@ -104,7 +133,13 @@ export async function manejarWebhookEvolution(
     );
     const media = !!(m.message?.documentMessage || m.message?.imageMessage || m.message?.audioMessage);
     const texto = txt.trim() ? txt : media ? null : "";
-    const respuestas = await procesarMensaje(cfg.bot, telefono, texto);
+    const leerPDF = esPDF(m.message?.documentMessage)
+      ? async () => {
+          const { textoDePDF, MAX_BYTES_PDF } = await import("@/lib/pdf");
+          return textoDePDF(await descargarPDFEvolution(cfg, m, MAX_BYTES_PDF));
+        }
+      : undefined;
+    const respuestas = await procesarMensaje(cfg.bot, telefono, texto, leerPDF);
     for (const r of respuestas) for (const parte of partir(r)) await enviar(telefono, parte);
   }
   return new Response("ok");
