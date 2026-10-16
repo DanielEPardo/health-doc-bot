@@ -93,7 +93,7 @@ async function extraerConProveedor(
   if (proveedor === "openrouter") {
     const { extraerConOpenRouter, opcionesOpenRouter } =
       await import("./extraccion/openrouter.server");
-    const r = await extraerConOpenRouter(anonimo, opcionesOpenRouter(env, f));
+    const r = await extraerConOpenRouter(anonimo, opcionesOpenRouter("revision", env, f));
     return {
       extraccion: { ...restaurarIdentidad(r.extraccion, local), longitudTexto: texto.length },
       modelo: r.modelo,
@@ -140,7 +140,7 @@ async function analizarConProveedor(
     if (proveedor === "openrouter") {
       const { analizarConOpenRouter, opcionesOpenRouter } =
         await import("./extraccion/openrouter.server");
-      return await analizarConOpenRouter(anonimo, resultados, opcionesOpenRouter(env, f));
+      return await analizarConOpenRouter(anonimo, resultados, opcionesOpenRouter("revision", env, f));
     }
     if (proveedor === "gemini") {
       const { analizarConGemini } = await import("./extraccion/gemini.server");

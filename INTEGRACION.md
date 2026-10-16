@@ -60,7 +60,7 @@ Lovable sincroniza en dos sentidos con GitHub. El plan actual muestra el editor 
    | `WHATSAPP_APP_SECRET` | Sí | App Secret (valida la firma de cada mensaje) |
    | `WHATSAPP_MENSAJE_COSTO` | No | Si existe, el bot lo envía antes de pedir la tutela (la FAQ promete informar el costo) |
    | `OPENROUTER_API_KEY` | Para la IA | **Proveedor de IA principal** (bot y web): revisión, observaciones jurídicas y redacción sugerida. Usa modelos de pago baratos con `data_collection: deny` (no guardan ni entrenan con el texto). Con esta clave no hace falta `GEMINI_API_KEY`. |
-| `OPENROUTER_MODELO` | No | Modelos de OpenRouter en orden de preferencia, separados por coma. Por defecto `anthropic/claude-haiku-5.5,google/gemini-2.5-flash-lite` (≈ 0,10 USD por millón de tokens de entrada; unos 0,3 centavos de dólar por revisión). |
+| `OPENROUTER_MODELO` | No | Modelos de OpenRouter en orden de preferencia, separados por coma. Si se pone, reemplaza el orden para todas las tareas. Por defecto: revisión con `google/gemini-2.5-flash-lite` (más rápido) y redacción con `anthropic/claude-haiku-5.5` (más preciso), cada uno con el otro de respaldo (≈ 0,10 USD por millón de tokens de entrada; unos 0,3 centavos de dólar por revisión). |
 | `GEMINI_API_KEY` | No | Alternativa si no hay `OPENROUTER_API_KEY` (Google Gemini, capa gratuita o de pago) |
 | `GEMINI_MODELOS` | No | Lista fija de modelos separados por coma. Si no se pone, se descubren con la API y se ordenan del más nuevo al más viejo |
 | `ANTHROPIC_API_KEY` | No | Alternativa: extracción con Claude |

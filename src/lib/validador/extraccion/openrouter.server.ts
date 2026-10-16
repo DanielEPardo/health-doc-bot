@@ -2,9 +2,14 @@
  * IA por medio de OpenRouter (solo servidor): una sola clave (OPENROUTER_API_KEY) para la
  * extracción, el análisis jurídico y la redacción sugerida.
  *
- * - Modelos de pago baratos que admiten respuestas con esquema JSON. Por defecto Claude Haiku 5.5
- *   y, si no responde, Gemini 2.5 Flash-Lite (≈ 0,10 USD por millón de tokens de entrada). Se
- *   cambian con OPENROUTER_MODELO (lista separada por comas, en orden de preferencia).
+ * - Modelos de pago baratos que admiten respuestas con esquema JSON (≈ 0,10 USD por millón de
+ *   tokens de entrada), según la tarea (medido en oct. 2026 con la tutela de ejemplo):
+ *   · revisión (extracción y análisis jurídico): Gemini 2.5 Flash-Lite, ~2 s + ~5 s; Claude
+ *     Haiku 5.5 tardaba ~11 s + ~25 s y a veces cortaba el JSON del análisis.
+ *   · redacción sugerida (ortografía, tono, frases fuera de lugar): Claude Haiku 5.5, ~7 s, más
+ *     preciso (no marca encabezados de página como frases fuera de lugar).
+ *   Si el primero falla se prueba el otro. OPENROUTER_MODELO (lista separada por comas) reemplaza
+ *   el orden para todas las tareas.
  * - provider.data_collection = "deny": OpenRouter solo enruta a proveedores que no guardan ni usan
  *   el texto para entrenar. require_parameters: solo proveedores que respetan el esquema JSON.
  * - El texto llega YA anonimizado (anonimizar.ts) y solo con la autorización de IA de la persona.
@@ -20,10 +25,11 @@ import {
 import type { AnalisisJuridicoIA, ResultadoRegla, TutelaExtraida } from "../types";
 
 export const URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions";
-export const MODELOS_OPENROUTER_POR_DEFECTO = [
-  "anthropic/claude-haiku-5.5",
-  "google/gemini-2.5-flash-lite",
-];
+export type TareaIA = "revision" | "redaccion";
+export const MODELOS_OPENROUTER: Record<TareaIA, string[]> = {
+  revision: ["google/gemini-2.5-flash-lite", "anthropic/claude-haiku-5.5"],
+  redaccion: ["anthropic/claude-haiku-5.5", "google/gemini-2.5-flash-lite"],
+};
 
 type Entorno = Record<string, string | undefined>;
 
@@ -40,8 +46,9 @@ export function openRouterConfigurado(env: Entorno = process.env): boolean {
   return Boolean(env["OPENROUTER_API_KEY"]?.trim());
 }
 
-/** Opciones desde el entorno (OPENROUTER_API_KEY y OPENROUTER_MODELO). */
+/** Opciones desde el entorno (OPENROUTER_API_KEY y OPENROUTER_MODELO) para una tarea. */
 export function opcionesOpenRouter(
+  tarea: TareaIA,
   env: Entorno = process.env,
   f?: typeof fetch,
 ): OpcionesOpenRouter {
@@ -51,7 +58,7 @@ export function opcionesOpenRouter(
     .filter(Boolean);
   return {
     apiKey: env["OPENROUTER_API_KEY"]?.trim() ?? "",
-    modelos: modelos?.length ? modelos : MODELOS_OPENROUTER_POR_DEFECTO,
+    modelos: modelos?.length ? modelos : MODELOS_OPENROUTER[tarea],
     ...(f ? { fetch: f } : {}),
   };
 }
@@ -77,9 +84,7 @@ export async function generarConOpenRouter<T>(
   if (!opciones.apiKey) throw new Error("Falta OPENROUTER_API_KEY");
   const f = opciones.fetch ?? fetch;
   const errores: string[] = [];
-  for (const modelo of opciones.modelos?.length
-    ? opciones.modelos
-    : MODELOS_OPENROUTER_POR_DEFECTO) {
+  for (const modelo of opciones.modelos?.length ? opciones.modelos : MODELOS_OPENROUTER.revision) {
     const abortar = new AbortController();
     const reloj = setTimeout(() => abortar.abort(), opciones.tiempoMaximoMs ?? 45_000);
     try {
@@ -93,7 +98,8 @@ export async function generarConOpenRouter<T>(
         },
         body: JSON.stringify({
           model: modelo,
-          temperature: 0.2,
+          // Sin «temperature»: los modelos Claude recientes no la aceptan y, con require_parameters,
+          // OpenRouter no encontraría proveedor.
           max_tokens: opciones.maxTokens ?? 6000,
           messages: [
             { role: "system", content: peticion.sistema },
@@ -108,7 +114,7 @@ export async function generarConOpenRouter<T>(
       });
       const datos = (await r.json().catch(() => ({}))) as {
         model?: string;
-        choices?: { message?: { content?: string | null } }[];
+        choices?: { message?: { content?: string | null }; finish_reason?: string }[];
         error?: { message?: string };
       };
       if (!r.ok) throw new Error(`${r.status} ${datos.error?.message ?? ""}`.trim());
@@ -117,6 +123,8 @@ export async function generarConOpenRouter<T>(
         .replace(/^```(?:json)?\s*/i, "")
         .replace(/```\s*$/, "");
       if (!contenido) throw new Error("respuesta vacía");
+      if (datos.choices?.[0]?.finish_reason === "length")
+        throw new Error("la respuesta se cortó (límite de tokens)");
       return { valor: convertir(JSON.parse(contenido) as unknown, modelo), modelo };
     } catch (err) {
       const motivo =

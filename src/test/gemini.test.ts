@@ -379,7 +379,7 @@ describe("OpenRouter — revisión completa (extracción y análisis jurídico)"
       entorno: { OPENROUTER_API_KEY: "or" },
       fetch: f as unknown as typeof fetch,
     });
-    expect(r.modeloIA).toBe("anthropic/claude-haiku-5.5");
+    expect(r.modeloIA).toBe("google/gemini-2.5-flash-lite");
     expect(r.analisisIA?.resumen).toBe("Bien estructurada.");
     expect(cuerpos).toHaveLength(2);
     for (const c of cuerpos) expect(c).not.toContain("43.555.123");

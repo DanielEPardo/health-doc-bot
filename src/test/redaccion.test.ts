@@ -11,7 +11,7 @@ import {
 import { anonimizar } from "@/lib/validador/extraccion/anonimizar";
 import { _limpiarCacheModelos } from "@/lib/validador/extraccion/gemini.server";
 import { normalizarRedaccion, sugerirRedaccionIA } from "@/lib/redaccion-ia.server";
-import { MODELOS_OPENROUTER_POR_DEFECTO } from "@/lib/validador/extraccion/openrouter.server";
+import { MODELOS_OPENROUTER } from "@/lib/validador/extraccion/openrouter.server";
 import { crearCorrector, revisarConDiccionario } from "@/lib/validador/redaccion/corrector";
 import { temaDetieneRevision } from "@/lib/redaccion-tipos";
 import { buscarAparicion } from "@/lib/ir-al-texto";
@@ -103,7 +103,7 @@ describe("Redacción sugerida con IA", () => {
       pedidas.push({ url, cuerpo: String(init?.body ?? "") });
       const { model } = JSON.parse(String(init?.body ?? "{}")) as { model: string };
       // El primer modelo falla: se prueba el siguiente.
-      if (model === MODELOS_OPENROUTER_POR_DEFECTO[0])
+      if (model === MODELOS_OPENROUTER.redaccion[0])
         return json({ error: { message: "overloaded" } }, 503);
       return json({ choices: [{ message: { content: JSON.stringify(respuesta) } }] });
     });
@@ -111,7 +111,7 @@ describe("Redacción sugerida con IA", () => {
       entorno: { OPENROUTER_API_KEY: "or", GEMINI_API_KEY: "no-se-usa" },
       fetch: f as unknown as typeof fetch,
     });
-    expect(r.modelo).toBe(MODELOS_OPENROUTER_POR_DEFECTO[1]);
+    expect(r.modelo).toBe(MODELOS_OPENROUTER.redaccion[1]);
     expect(pedidas.every((p) => p.url.includes("openrouter.ai"))).toBe(true);
     const cuerpo = JSON.parse(pedidas[1]!.cuerpo);
     expect(cuerpo.response_format.type).toBe("json_schema");

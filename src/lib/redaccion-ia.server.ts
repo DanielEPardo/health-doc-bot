@@ -5,7 +5,7 @@
  * - Recibe el texto YA ANONIMIZADO (anonimizar.ts) y solo con la autorización de IA de la persona.
  * - La IA no decide nada: las reglas siguen dando el resultado. Esto son propuestas que la persona
  *   revisa, completa y decide si usa.
- * - Proveedor: OpenRouter (OPENROUTER_API_KEY), con los mismos modelos baratos de la revisión
+ * - Proveedor: OpenRouter (OPENROUTER_API_KEY); para esta tarea, Claude Haiku 5.5 primero
  *   (extraccion/openrouter.server.ts). Si no hay OpenRouter, Gemini (GEMINI_API_KEY).
  */
 import { contieneMarcador } from "@/lib/validador/extraccion/anonimizar";
@@ -191,7 +191,7 @@ export async function sugerirRedaccionIA(
     normalizarRedaccion(crudo, textoAnonimo, modelo);
   if (openRouterConfigurado(env)) {
     const r = await generarConOpenRouter({ ...peticion, nombre: "redaccion_tutela" }, convertir, {
-      ...opcionesOpenRouter(env, opciones.fetch),
+      ...opcionesOpenRouter("redaccion", env, opciones.fetch),
       tiempoMaximoMs: 45_000,
     });
     return r.valor;
