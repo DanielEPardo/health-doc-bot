@@ -25,4 +25,4 @@
 - Legal pages (/politica-de-datos, /terminos) share src/components/legal/pagina-legal.tsx and the responsible-party data in src/lib/datos-responsable.ts. If a feature changes what data is collected or who processes it, update those pages and bump the version in src/lib/acuerdos.ts so users accept again.
 - There is no cookie policy page or cookie banner (team decision, 2026-10-15). The data policy's «Datos técnicos» item states what is used: Clerk session data and Lovable's visit measurement on the hosted site. Clerk telemetry is disabled (clerk-browser.ts, clerk-boundary.tsx).
 - Keep src/test/accesibilidad.test.tsx passing (axe-core WCAG 2.1 AA, alt text on every <img>).
-
+- The «Redacción sugerida» panel (src/components/redaccion-sugerida.tsx) never changes the score: templates are deterministic (src/lib/validador/redaccion/plantillas.ts) and AI suggestions (src/lib/redaccion-ia.server.ts) only run with the AI consent checkbox, on anonymized text, and only accept corrections whose original fragment exists in the text. The prompt restricts citations to a fixed list; keep it that way.

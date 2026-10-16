@@ -31,12 +31,24 @@ const SIN_IA = {
   web: "Si no marcas la casilla, la revisión se hace solo en tu navegador, sin IA.",
 } as const;
 
-/** Puntos del aviso, en lenguaje claro. */
-export function puntosAvisoIA(proveedor: ProveedorAviso, canal: keyof typeof SIN_IA): PuntoAviso[] {
+/** Puntos del aviso, en lenguaje claro. `respaldo`: la web puede usar OpenRouter si el proveedor falla. */
+export function puntosAvisoIA(
+  proveedor: ProveedorAviso,
+  canal: keyof typeof SIN_IA,
+  opciones: { respaldo?: boolean } = {},
+): PuntoAviso[] {
+  const redaccion =
+    canal === "web"
+      ? " En esta página también te sugiere correcciones de ortografía y redacción; tú decides si las usas."
+      : "";
+  const respaldo =
+    canal === "web" && opciones.respaldo
+      ? " Para la redacción sugerida, si ese servicio no responde, el mismo texto sin tus datos de identificación puede procesarlo un modelo gratuito por medio de OpenRouter, que según el modelo también puede usarlo para entrenar sus sistemas."
+      : "";
   return [
     {
       titulo: "Qué hace la IA",
-      texto: `Usamos inteligencia artificial (${NOMBRE[proveedor]}) como apoyo: lee tu tutela y escribe observaciones con base en la Constitución Política, el Decreto 2591 de 1991, la Ley Estatutaria 1751 de 2015 y la jurisprudencia de la Corte Constitucional.`,
+      texto: `Usamos inteligencia artificial (${NOMBRE[proveedor]}) como apoyo: lee tu tutela y escribe observaciones con base en la Constitución Política, el Decreto 2591 de 1991, la Ley Estatutaria 1751 de 2015 y la jurisprudencia de la Corte Constitucional.${redaccion}`,
     },
     {
       titulo: "Qué decide y qué no",
@@ -53,7 +65,7 @@ export function puntosAvisoIA(proveedor: ProveedorAviso, canal: keyof typeof SIN
       texto:
         "No reemplaza a un abogado, a la Defensoría del Pueblo ni a la Personería. Nada se decide de forma automática sobre tu caso: tú decides qué cambiar y si presentas la tutela, y solo el juez decide.",
     },
-    { titulo: "Tus datos", texto: DATOS[proveedor] },
+    { titulo: "Tus datos", texto: `${DATOS[proveedor]}${respaldo}` },
     {
       titulo: "Es voluntario",
       texto: `No estás obligado(a) a aceptar el análisis con IA. ${SIN_IA[canal]} Puedes revocar tu autorización y pedir que borremos tus datos cuando quieras (Ley 1581 de 2012).`,

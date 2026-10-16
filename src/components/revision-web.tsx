@@ -51,6 +51,8 @@ import {
 import { SubirPDF } from "@/components/subir-pdf";
 import { ListaAnexos } from "@/components/lista-anexos";
 import { GuardarEnHistorial } from "@/components/guardar-historial";
+import { RedaccionSugerida } from "@/components/redaccion-sugerida";
+import { getEstadoRedaccion } from "@/lib/redaccion.functions";
 import { useHistorial } from "@/hooks/use-historial";
 
 /*
@@ -403,6 +405,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
   const [acuerdoDocumentos, setAcuerdoDocumentos] = useState(false);
   const [avisoPDF, setAvisoPDF] = useState("");
   const [continuando, setContinuando] = useState<{ titulo: string; detalle: string } | null>(null);
+  const [redaccionIA, setRedaccionIA] = useState({ disponible: false, respaldo: false });
   const historial = useHistorial();
   const { guardar: guardarEnHistorial, cargar: cargarDelHistorial } = historial;
   const resultadoRef = useRef<HTMLDivElement>(null);
@@ -418,6 +421,9 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
     getEstadoDocumentos()
       .then((e) => activo && setProveedorDocumentos(e.proveedor))
       .catch(() => activo && setProveedorDocumentos(null));
+    getEstadoRedaccion()
+      .then((e) => activo && setRedaccionIA(e))
+      .catch(() => activo && setRedaccionIA({ disponible: false, respaldo: false }));
     return () => {
       activo = false;
     };
@@ -584,33 +590,49 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
         </p>
       )}
 
-      <label htmlFor={idTexto} className="revision-web-label">
-        Texto de tu tutela
-      </label>
-      <Textarea
-        id={idTexto}
-        aria-describedby={idAyuda}
-        aria-invalid={aviso ? true : undefined}
-        className="revision-web-texto"
-        placeholder="Señor Juez… Yo, [nombre], identificado(a) con cédula… HECHOS… PRETENSIONES…"
-        value={texto}
-        onChange={(e) => {
-          setTexto(e.target.value);
-          if (aviso) setAviso("");
-        }}
-        onKeyDown={alTeclear}
-        maxLength={LONGITUD_MAXIMA}
-      />
-      <p id={idAyuda} className="revision-web-ayuda">
-        {contador.toLocaleString("es-CO")} caracteres
-        {contador > 0 && contador < LONGITUD_MINIMA ? ` (mínimo ${LONGITUD_MINIMA})` : ""} · No
-        incluyas historias clínicas completas · Atajo: Ctrl/⌘ + Enter
-      </p>
-      {aviso && (
-        <p role="alert" className="revision-web-aviso">
-          {aviso}
-        </p>
-      )}
+      <div className="revision-web-editor">
+        <div className="revision-web-editor-texto">
+          <label htmlFor={idTexto} className="revision-web-label">
+            Texto de tu tutela
+          </label>
+          <Textarea
+            id={idTexto}
+            aria-describedby={idAyuda}
+            aria-invalid={aviso ? true : undefined}
+            className="revision-web-texto"
+            placeholder="Señor Juez… Yo, [nombre], identificado(a) con cédula… HECHOS… PRETENSIONES…"
+            value={texto}
+            onChange={(e) => {
+              setTexto(e.target.value);
+              if (aviso) setAviso("");
+            }}
+            onKeyDown={alTeclear}
+            maxLength={LONGITUD_MAXIMA}
+          />
+          <p id={idAyuda} className="revision-web-ayuda">
+            {contador.toLocaleString("es-CO")} caracteres
+            {contador > 0 && contador < LONGITUD_MINIMA ? ` (mínimo ${LONGITUD_MINIMA})` : ""} · No
+            incluyas historias clínicas completas · Atajo: Ctrl/⌘ + Enter
+          </p>
+          {aviso && (
+            <p role="alert" className="revision-web-aviso">
+              {aviso}
+            </p>
+          )}
+        </div>
+        <RedaccionSugerida
+          texto={texto}
+          textoRevisado={textoRevisado}
+          res={res}
+          declarados={declaradosRevisados}
+          iaDisponible={redaccionIA.disponible && proveedorIA !== null}
+          iaAutorizada={usarIA}
+          onCambiarTexto={(nuevo) => {
+            setTexto(nuevo);
+            if (aviso) setAviso("");
+          }}
+        />
+      </div>
       <CuestionarioDocumentos
         valor={declarados}
         onCambio={setDeclarados}
@@ -634,7 +656,9 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
             <strong>sin nombre, cédula, teléfono, correo ni dirección</strong>
             {proveedorIA === "gemini"
               ? " al servicio gratuito de Google Gemini: Google puede usar ese texto para mejorar sus productos y personas de Google pueden leerlo."
-              : " a Anthropic."}{" "}
+              : " a Anthropic."}
+            {redaccionIA.respaldo &&
+              " Para la redacción sugerida, si ese servicio no responde, el mismo texto sin datos personales puede procesarlo un modelo gratuito por medio de OpenRouter, en condiciones parecidas."}{" "}
             No lo guardamos.
           </p>
           <details className="revision-web-ia-aviso">
@@ -643,7 +667,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
               artificial
             </summary>
             <dl>
-              {puntosAvisoIA(proveedorIA, "web").map((p) => (
+              {puntosAvisoIA(proveedorIA, "web", { respaldo: redaccionIA.respaldo }).map((p) => (
                 <div key={p.titulo}>
                   <dt>{p.titulo}</dt>
                   <dd>{p.texto}</dd>

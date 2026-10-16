@@ -20,6 +20,18 @@ export {
   type OpcionesTexto,
 } from "./motor";
 export {
+  revisarOrtografia,
+  revisarTema,
+  aplicarCorreccion,
+  correccionVigente,
+} from "./redaccion/ortografia";
+export {
+  seccionesSugeridas,
+  agregarSeccion,
+  pendientesPorCompletar,
+  type SeccionSugerida,
+} from "./redaccion/plantillas";
+export {
   normalizarDeclarados,
   prepararDocumentos,
   listaAnexos,

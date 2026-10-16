@@ -125,3 +125,39 @@ describe("Cuestionario de documentos — respuestas", () => {
     expect(screen.getByRole("heading", { name: /Documentos para adjuntar/ })).toBeInTheDocument();
   });
 });
+
+describe("Redacción sugerida (panel al lado del texto)", () => {
+  it("después de revisar propone las partes que faltan y se pueden agregar con un clic", () => {
+    render(<RevisionWeb />);
+    const caja = screen.getByLabelText("Texto de tu tutela") as HTMLTextAreaElement;
+    expect(screen.getByRole("complementary", { name: "Redacción sugerida" })).toBeInTheDocument();
+    fireEvent.change(caja, {
+      target: {
+        value: readFileSync(
+          path.join(process.cwd(), "src/test/fixtures/tutela-incompleta.txt"),
+          "utf8",
+        ),
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    const panel = screen.getByRole("complementary", { name: "Redacción sugerida" });
+    const tarjeta = within(panel).getByText("Juramento").closest("li")!;
+    fireEvent.click(within(tarjeta).getByRole("button", { name: /Agregar al final/ }));
+    expect(caja.value).toMatch(/\n\nJURAMENTO\nBajo la gravedad del juramento/);
+    expect(within(tarjeta).getByRole("button", { name: /Agregada/ })).toBeDisabled();
+  });
+});
+
+describe("Redacción sugerida — ortografía mientras se escribe", () => {
+  it("marca errores frecuentes sin IA y los corrige con un clic", () => {
+    render(<RevisionWeb />);
+    const caja = screen.getByLabelText("Texto de tu tutela") as HTMLTextAreaElement;
+    fireEvent.change(caja, {
+      target: { value: "Señor juez, despues de la cita la eps no respondio." },
+    });
+    const panel = screen.getByRole("complementary", { name: "Redacción sugerida" });
+    expect(within(panel).getByText("despues")).toBeInTheDocument();
+    fireEvent.click(within(panel).getByRole("button", { name: /Aplicar todas/ }));
+    expect(caja.value).toBe("Señor juez, después de la cita la EPS no respondió.");
+  });
+});

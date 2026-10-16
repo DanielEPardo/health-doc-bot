@@ -197,8 +197,10 @@ function Politica() {
                 </li>
                 <li>Meta (WhatsApp) y Twilio: mensajes, si nos escribes por WhatsApp.</li>
                 <li>
-                  Google (Gemini) o Anthropic (Claude): análisis con IA y lectura de documentos, si
-                  los autorizas.
+                  Google (Gemini) o Anthropic (Claude): análisis con IA, redacción sugerida y
+                  lectura de documentos, si los autorizas. Si está activado, OpenRouter procesa la
+                  redacción sugerida cuando Gemini no responde, con el mismo texto sin tus datos de
+                  identificación.
                 </li>
               </ul>
               <p>
