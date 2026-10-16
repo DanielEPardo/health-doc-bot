@@ -27,6 +27,11 @@ export {
   correccionVigente,
 } from "./redaccion/ortografia";
 export {
+  revisarFormalidad,
+  frasesFueraDeLugar,
+  type AvisoFormalidad,
+} from "./redaccion/formalidad";
+export {
   seccionesSugeridas,
   agregarSeccion,
   pendientesPorCompletar,

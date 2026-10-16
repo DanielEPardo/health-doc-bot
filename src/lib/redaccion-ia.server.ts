@@ -47,7 +47,7 @@ export const ESQUEMA_REDACCION = {
         additionalProperties: false,
         required: ["tipo", "original", "corregido", "motivo"],
         properties: {
-          tipo: { type: "string", enum: ["ortografia", "redaccion"] },
+          tipo: { type: "string", enum: ["ortografia", "redaccion", "formalidad"] },
           original: { type: "string" },
           corregido: { type: "string" },
           motivo: { type: "string" },
@@ -78,11 +78,15 @@ Devuelve solo el JSON pedido:
    - "esTutelaDeSalud": true si lo es, aunque esté incompleta, desordenada o mal escrita (basta con que alguien le pida a un juez que le protejan su salud frente a una EPS, IPS o entidad similar). false si es cualquier otra cosa: un texto sin sentido o con palabras al azar, una receta, una tarea, una noticia, una carta o queja que no le pide nada a un juez, una tutela sobre otro tema (pensión, educación, trabajo) o un texto de salud que no es una tutela (historia clínica, fórmula, artículo). No supongas que es una tutela solo porque te piden revisarla.
    - "observacion": si es false, explica en una o dos frases, en lenguaje sencillo, qué es el texto y qué le falta para ser una tutela de salud. Si es true, cadena vacía.
 
-2. "correcciones": cambios concretos sobre el texto, de dos tipos:
+2. "correcciones": cambios concretos sobre el texto, de tres tipos:
    - "ortografia": revisa el texto PALABRA POR PALABRA e incluye TODOS los errores: letras de más, de menos, cambiadas o invertidas («cuandow» → «cuando», «medicamneto» → «medicamento», «beces» → «veces»), tildes (también las que dependen del contexto: «el» / «él», «esta» / «está», «solicite» / «solicité»), mayúsculas, puntuación y concordancia. "original" de 1 a 15 palabras. No dejes errores sin marcar aunque sean muchos.
    - "redaccion": frases confusas, muy largas, repetidas o desordenadas que el juez podría no entender. Reescríbelas para que se entiendan mejor, en primera persona y con lenguaje claro, SIN agregar ni quitar hechos. "original" puede ser una oración o un párrafo corto (máximo 70 palabras).
-   - En ambos casos "original" debe copiarse EXACTAMENTE del texto (con sus errores, mayúsculas y signos) y "motivo" explica el cambio en pocas palabras.
-   - No cambies nombres propios, números, fechas, citas de normas ni los marcadores entre corchetes. Máximo ${MAX_CORRECCIONES}: si hay más, primero los de ortografía.
+   - "formalidad": la tutela la lee un juez, así que revisa TODO el texto (también la mitad de los párrafos) buscando:
+     a) frases o pedazos de frase que no tienen relación con el caso: chistes, comentarios sueltos, texto pegado por error, nombres de juegos o series (por ejemplo «las gallinas vuelan alto y el cielo es azul pokemon»). "original" es exactamente ese pedazo y "corregido" es la cadena vacía "" para quitarlo. Si está metido dentro de una oración del caso, "original" es la oración completa y "corregido" la misma oración sin ese pedazo.
+     b) lenguaje informal o irrespetuoso: palabras coloquiales o de chat («parce», «porfa», «jajaja»), groserías, insultos o calificativos contra la EPS o las personas, sarcasmo, amenazas, emojis, signos repetidos o frases en mayúscula sostenida para gritar. "corregido" es la misma idea en tono formal y respetuoso, en primera persona, sin perder ningún hecho.
+     No marques como informales las expresiones de cortesía normales («gracias por su atención», «que Dios le pague») ni la forma sencilla de escribir de la persona si es respetuosa.
+   - En todos los casos "original" debe copiarse EXACTAMENTE del texto (con sus errores, mayúsculas y signos) y "motivo" explica el cambio en pocas palabras.
+   - No cambies nombres propios, números, fechas, citas de normas ni los marcadores entre corchetes. Máximo ${MAX_CORRECCIONES}: si hay más, primero los de formalidad y ortografía.
 
 3. "secciones": texto propuesto SOLO para los puntos pendientes que te indico, escrito en primera persona, con lenguaje claro y respetuoso, listo para copiar en la tutela.
    - Usa únicamente los hechos que aparecen en la tutela. NO INVENTES fechas, nombres, números, diagnósticos ni servicios: cuando falte un dato escribe [completa: qué dato].
@@ -116,7 +120,10 @@ export function normalizarRedaccion(
     .map((c) => {
       const x = (c ?? {}) as Record<string, unknown>;
       return {
-        tipo: x["tipo"] === "redaccion" ? ("redaccion" as const) : ("ortografia" as const),
+        tipo:
+          x["tipo"] === "redaccion" || x["tipo"] === "formalidad"
+            ? (x["tipo"] as "redaccion" | "formalidad")
+            : ("ortografia" as const),
         original: corto(x["original"], 800),
         corregido: corto(x["corregido"], 800),
         motivo: corto(x["motivo"], 160),
@@ -125,7 +132,8 @@ export function normalizarRedaccion(
     .filter(
       (c) =>
         c.original &&
-        c.corregido &&
+        // Solo una corrección de formalidad puede quitar el fragmento (corregido vacío).
+        (c.corregido || c.tipo === "formalidad") &&
         c.original !== c.corregido &&
         textoAnonimo.includes(c.original) &&
         !contieneMarcador(c.original) &&

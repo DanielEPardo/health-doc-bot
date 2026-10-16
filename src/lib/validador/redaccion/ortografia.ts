@@ -263,7 +263,17 @@ export function palabrasNoReconocidas(texto: string, maximo = 8): string[] {
 
 /** Aplica una corrección al texto (todas las apariciones si es global; si no, la primera). */
 export function aplicarCorreccion(texto: string, c: Correccion): string {
-  if (!c.global) return texto.includes(c.original) ? texto.replace(c.original, c.corregido) : texto;
+  if (!c.global) {
+    const i = texto.indexOf(c.original);
+    if (i < 0) return texto;
+    if (c.corregido) return texto.replace(c.original, c.corregido);
+    // Quitar el fragmento sin dejar espacios dobles ni signos sueltos.
+    const antes = texto.slice(0, i).replace(/[ \t]+$/, "");
+    const despues = texto.slice(i + c.original.length).replace(/^[ \t]+/, "");
+    const separador =
+      antes && despues && !/\n$/.test(antes) && !/^[\n.,;:!?]/.test(despues) ? " " : "";
+    return antes + separador + despues;
+  }
   // Cada aparición se corrige con su propia mayúscula: «Despues» → «Después», «despues» → «después».
   return texto.replace(palabraRe(c.original), (m) => {
     const clave = m.toLowerCase();

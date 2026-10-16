@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   Check,
@@ -6,6 +6,7 @@ import {
   Loader2,
   PenLine,
   Plus,
+  Scale,
   SpellCheck,
   Sparkles,
   Wand2,
@@ -18,6 +19,8 @@ import {
   extraerHeuristico,
   palabrasNoReconocidas,
   revisarOrtografia,
+  revisarFormalidad,
+  frasesFueraDeLugar,
   pendientesPorCompletar,
   seccionesSugeridas,
   type DocumentosDeclarados,
@@ -25,9 +28,10 @@ import {
 } from "@/lib/validador";
 import type { ResultadoPublico } from "@/lib/revision-ia.functions";
 import { sugerirRedaccion, type RedaccionPublica } from "@/lib/redaccion.functions";
-import type { Correccion, TemaTutela } from "@/lib/redaccion-tipos";
+import { temaDetieneRevision, type Correccion, type TemaTutela } from "@/lib/redaccion-tipos";
 import type { RevisionDiccionario } from "@/lib/validador/redaccion/corrector";
 import { cabecerasDeSesion, motivoDe } from "@/lib/navegador";
+import { buscarAparicion } from "@/lib/ir-al-texto";
 
 /** Muestra el texto con los espacios «[completa: …]» resaltados. */
 function TextoConEspacios({ texto }: { texto: string }) {
@@ -99,17 +103,59 @@ function TarjetaSeccion({
   );
 }
 
-/** Lista de correcciones que se aplican con un clic (una por una o todas). */
+/** Lleva al lugar del texto donde está un fragmento (lo selecciona y desplaza el cuadro). */
+export type IrAlTexto = (
+  fragmento: string,
+  opciones?: { palabra?: boolean | undefined; desde?: number | undefined },
+) => void;
+
+/** Botón que muestra un fragmento en el texto de la tutela (para ver su contexto). */
+function VerEnTexto({
+  fragmento,
+  palabra,
+  onIrAlTexto,
+  children,
+}: {
+  fragmento: string;
+  palabra?: boolean | undefined;
+  onIrAlTexto?: IrAlTexto | undefined;
+  children: ReactNode;
+}) {
+  if (!onIrAlTexto) return <>{children}</>;
+  return (
+    <button
+      type="button"
+      className="redaccion-ir"
+      title="Ver dónde está en el texto"
+      onClick={() => onIrAlTexto(fragmento, { palabra })}
+    >
+      {children}
+      <span className="sr-only"> (ver dónde está en el texto)</span>
+    </button>
+  );
+}
+
+/**
+ * Lista de correcciones que se aplican con un clic (una por una o todas). Al tocar una corrección
+ * se muestra dónde está en el texto; al aplicarla, queda seleccionado el texto corregido.
+ */
 function ListaCorrecciones({
   items,
   texto,
   onCambiarTexto,
+  onIrAlTexto,
 }: {
   items: Correccion[];
   texto: string;
   onCambiarTexto: (nuevo: string) => void;
+  onIrAlTexto?: IrAlTexto | undefined;
 }) {
   const vigentes = items.filter((c) => correccionVigente(texto, c));
+  const aplicar = (c: Correccion) => {
+    const donde = buscarAparicion(texto, c.original, 0, c.global)?.inicio ?? 0;
+    onCambiarTexto(aplicarCorreccion(texto, c));
+    onIrAlTexto?.(c.corregido, { palabra: c.global, desde: donde });
+  };
   const aplicarTodas = () =>
     onCambiarTexto(vigentes.reduce((t, c) => aplicarCorreccion(t, c), texto));
   return (
@@ -117,29 +163,48 @@ function ListaCorrecciones({
       <ul className="redaccion-correcciones">
         {items.map((c, i) => {
           const vigente = correccionVigente(texto, c);
+          const quitar = !c.corregido;
+          // Frases completas (redacción, formalidad larga o un fragmento a quitar): antes y después.
+          const largo =
+            c.tipo === "redaccion" ||
+            (c.tipo === "formalidad" && (quitar || c.original.length > 30));
           return (
-            <li key={`${c.original}-${i}`} className={c.tipo === "redaccion" ? "es-redaccion" : ""}>
-              {c.tipo === "redaccion" ? (
+            <li key={`${c.original}-${i}`} className={largo ? "es-redaccion" : ""}>
+              {largo ? (
                 <>
                   <p className="redaccion-antes">
-                    <del>{c.original}</del>
+                    <VerEnTexto
+                      fragmento={c.original}
+                      onIrAlTexto={vigente ? onIrAlTexto : undefined}
+                    >
+                      <del>{c.original}</del>
+                    </VerEnTexto>
                   </p>
-                  <p className="redaccion-despues">{c.corregido}</p>
+                  {quitar ? (
+                    <p className="redaccion-motivo">Se quita del texto.</p>
+                  ) : (
+                    <p className="redaccion-despues">{c.corregido}</p>
+                  )}
                 </>
               ) : (
                 <p>
-                  <del>{c.original}</del> → <ins>{c.corregido}</ins>
+                  <VerEnTexto
+                    fragmento={c.original}
+                    palabra={c.global}
+                    onIrAlTexto={vigente ? onIrAlTexto : undefined}
+                  >
+                    <del>{c.original}</del> → <ins>{c.corregido}</ins>
+                  </VerEnTexto>
                 </p>
               )}
               <p className="redaccion-motivo">{c.motivo}</p>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={!vigente}
-                onClick={() => onCambiarTexto(aplicarCorreccion(texto, c))}
-              >
+              <Button size="sm" variant="ghost" disabled={!vigente} onClick={() => aplicar(c)}>
                 {vigente ? (
-                  "Aplicar"
+                  quitar ? (
+                    "Quitar"
+                  ) : (
+                    "Aplicar"
+                  )
                 ) : (
                   <>
                     <Check aria-hidden="true" /> Hecho
@@ -180,6 +245,7 @@ export function RedaccionSugerida({
   iaDisponible,
   iaAutorizada,
   onTemaIA,
+  onIrAlTexto,
   onCambiarTexto,
 }: {
   texto: string;
@@ -196,6 +262,8 @@ export function RedaccionSugerida({
   iaDisponible: boolean;
   iaAutorizada: boolean;
   onTemaIA?: (tema: TemaTutela | null) => void;
+  /** Lleva al lugar del texto donde está una sugerencia. */
+  onIrAlTexto?: IrAlTexto;
   onCambiarTexto: (nuevo: string) => void;
 }) {
   const [agregadas, setAgregadas] = useState<Set<string>>(new Set());
@@ -204,22 +272,32 @@ export function RedaccionSugerida({
   const [error, setError] = useState("");
 
   const frecuentes = useMemo(() => revisarOrtografia(texto), [texto]);
+  const formalidad = useMemo(() => revisarFormalidad(texto), [texto]);
+  // Palabras informales («porfa», «parce»): las trata «Tono formal», no el diccionario.
+  const informales = useMemo(
+    () =>
+      new Set([
+        ...formalidad.correcciones.map((c) => c.original.toLowerCase()),
+        ...formalidad.avisos.map((a) => a.fragmento.toLowerCase()),
+      ]),
+    [formalidad],
+  );
   // Errores frecuentes + diccionario (sin repetir palabras). Las del diccionario pueden ser de una
   // versión anterior del texto: solo se muestran las que siguen en él.
   const ortografia = useMemo(() => {
-    const ya = new Set(frecuentes.map((c) => c.original.toLowerCase()));
+    const ya = new Set([...frecuentes.map((c) => c.original.toLowerCase()), ...informales]);
     const delDiccionario = (diccionario?.correcciones ?? []).filter(
       (c) => !ya.has(c.original.toLowerCase()) && correccionVigente(texto, c),
     );
     return [...frecuentes, ...delDiccionario];
-  }, [frecuentes, diccionario, texto]);
+  }, [frecuentes, diccionario, texto, informales]);
   const raras = useMemo(() => {
-    const ya = new Set(ortografia.map((c) => c.original.toLowerCase()));
+    const ya = new Set([...ortografia.map((c) => c.original.toLowerCase()), ...informales]);
     const todas = [...palabrasNoReconocidas(texto), ...(diccionario?.desconocidas ?? [])];
     return [...new Set(todas)]
       .filter((p) => !ya.has(p.toLowerCase()) && texto.includes(p.replace(/…$/, "")))
       .slice(0, 10);
-  }, [texto, diccionario, ortografia]);
+  }, [texto, diccionario, ortografia, informales]);
   const plantillas = useMemo(
     () =>
       res ? seccionesSugeridas(res.resultados, extraerHeuristico(textoRevisado), declarados) : [],
@@ -241,6 +319,23 @@ export function RedaccionSugerida({
     (c) => c.tipo === "ortografia" && !yaSinIA.has(c.original.toLowerCase()),
   );
   const iaRedaccion = (ia?.correcciones ?? []).filter((c) => c.tipo === "redaccion");
+
+  // Tono formal y frases sin relación con el caso: sin IA mientras se escribe, más lo de la IA.
+  const fueraDeLugar = useMemo(
+    // Si todo el texto no es una tutela, ya lo dice el aviso de tema: no se marca frase por frase.
+    () => (temaDetieneRevision(temaLocal) ? [] : frasesFueraDeLugar(texto)),
+    [texto, temaLocal],
+  );
+  const sinIAFormal = [...fueraDeLugar, ...formalidad.correcciones];
+  const yaFormal = sinIAFormal.map((c) => c.original.toLowerCase());
+  const iaFormalidad = (ia?.correcciones ?? []).filter(
+    (c) =>
+      c.tipo === "formalidad" &&
+      !yaFormal.some(
+        (o) => o.includes(c.original.toLowerCase()) || c.original.toLowerCase().includes(o),
+      ),
+  );
+  const correccionesFormales = [...sinIAFormal, ...iaFormalidad];
 
   const agregar = (clave: string, s: SeccionSugerida) => {
     onCambiarTexto(agregarSeccion(texto, s));
@@ -351,7 +446,11 @@ export function RedaccionSugerida({
                 </p>
                 <ul>
                   {raras.map((p) => (
-                    <li key={p}>{p}</li>
+                    <li key={p}>
+                      <VerEnTexto fragmento={p.replace(/…$/, "")} onIrAlTexto={onIrAlTexto}>
+                        {p}
+                      </VerEnTexto>
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -373,7 +472,53 @@ export function RedaccionSugerida({
                 items={[...ortografia, ...iaOrtografia]}
                 texto={texto}
                 onCambiarTexto={onCambiarTexto}
+                onIrAlTexto={onIrAlTexto}
               />
+            )}
+          </section>
+        )}
+
+        {texto.trim() && !temaDetieneRevision(tema) && (
+          <section className="redaccion-bloque">
+            <h4>
+              <Scale aria-hidden="true" /> Tono formal
+            </h4>
+            {formalidad.avisos.length > 0 && (
+              <ul className="redaccion-avisos">
+                {formalidad.avisos.map((a) => (
+                  <li key={a.fragmento}>
+                    <p>
+                      <AlertTriangle aria-hidden="true" />{" "}
+                      <VerEnTexto
+                        fragmento={a.fragmento.split(" ")[0]!}
+                        palabra={/^[\p{L}]+$/u.test(a.fragmento)}
+                        onIrAlTexto={onIrAlTexto}
+                      >
+                        <strong>«{a.fragmento}»</strong>
+                      </VerEnTexto>
+                    </p>
+                    <p className="redaccion-motivo">{a.motivo}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {correccionesFormales.length > 0 ? (
+              <ListaCorrecciones
+                items={correccionesFormales}
+                texto={texto}
+                onCambiarTexto={onCambiarTexto}
+                onIrAlTexto={onIrAlTexto}
+              />
+            ) : (
+              formalidad.avisos.length === 0 && (
+                <p className="redaccion-motivo">
+                  <Check aria-hidden="true" /> El tono es respetuoso y todo parece tener relación
+                  con tu caso.
+                  {!ia && iaDisponible && iaAutorizada
+                    ? " Al revisar, la IA también lo confirma frase por frase."
+                    : ""}
+                </p>
+              )
             )}
           </section>
         )}
@@ -390,6 +535,7 @@ export function RedaccionSugerida({
                 items={iaRedaccion}
                 texto={texto}
                 onCambiarTexto={onCambiarTexto}
+                onIrAlTexto={onIrAlTexto}
               />
             )}
             {ia.secciones.length > 0 && (

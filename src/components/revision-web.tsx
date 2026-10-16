@@ -55,6 +55,7 @@ import { getEstadoRedaccion } from "@/lib/redaccion.functions";
 import { temaDetieneRevision, type TemaTutela } from "@/lib/redaccion-tipos";
 import { useOrtografiaDiccionario } from "@/hooks/use-ortografia-diccionario";
 import { useHistorial } from "@/hooks/use-historial";
+import { buscarAparicion, mostrarEnTextarea } from "@/lib/ir-al-texto";
 
 /*
  * Revisión en la web. Diseño guiado por las 10 heurísticas de Nielsen
@@ -428,6 +429,28 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
   const historial = useHistorial();
   const { guardar: guardarEnHistorial, cargar: cargarDelHistorial } = historial;
   const resultadoRef = useRef<HTMLDivElement>(null);
+  const textoRef = useRef<HTMLTextAreaElement>(null);
+
+  // «Redacción sugerida» → lleva al lugar del texto donde está la sugerencia (con su contexto).
+  // Si ya está seleccionada esa aparición, pasa a la siguiente.
+  const irAlTexto = (
+    fragmento: string,
+    opciones: { palabra?: boolean | undefined; desde?: number | undefined } = {},
+  ) => {
+    // Espera al siguiente render: si se acaba de aplicar una corrección, el texto ya cambió.
+    requestAnimationFrame(() => {
+      const ta = textoRef.current;
+      if (!ta) return;
+      const seleccion = ta.value.slice(ta.selectionStart, ta.selectionEnd).toLowerCase();
+      const desde =
+        opciones.desde ??
+        (seleccion && seleccion === fragmento.toLowerCase() ? ta.selectionEnd : 0);
+      const rango = fragmento
+        ? buscarAparicion(ta.value, fragmento, desde, opciones.palabra)
+        : { inicio: desde, fin: desde };
+      if (rango) mostrarEnTextarea(ta, rango);
+    });
+  };
   const idTexto = useId();
   const idAyuda = useId();
 
@@ -624,6 +647,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
             Texto de tu tutela
           </label>
           <Textarea
+            ref={textoRef}
             id={idTexto}
             aria-describedby={idAyuda}
             aria-invalid={aviso ? true : undefined}
@@ -662,6 +686,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
           iaDisponible={redaccionIA.disponible && proveedorIA !== null}
           iaAutorizada={usarIA}
           onTemaIA={setTemaIA}
+          onIrAlTexto={irAlTexto}
           onCambiarTexto={(nuevo) => {
             setTexto(nuevo);
             if (aviso) setAviso("");

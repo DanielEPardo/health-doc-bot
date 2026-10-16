@@ -4,8 +4,12 @@ export interface Correccion {
   original: string;
   corregido: string;
   motivo: string;
-  /** ortografia: tildes, letras, mayúsculas, puntuación. redaccion: frase reescrita para que se entienda mejor. */
-  tipo: "ortografia" | "redaccion";
+  /**
+   * ortografia: tildes, letras, mayúsculas, puntuación. redaccion: frase reescrita para que se
+   * entienda mejor. formalidad: lenguaje informal u ofensivo, o una frase que no tiene relación
+   * con el caso (con `corregido` vacío = quitarla).
+   */
+  tipo: "ortografia" | "redaccion" | "formalidad";
   /** Si es true, se corrigen todas las apariciones de la palabra (correcciones sin IA). */
   global?: boolean | undefined;
   /** Forma correcta en minúscula (o nombre propio) para corregir cada aparición con su mayúscula. */

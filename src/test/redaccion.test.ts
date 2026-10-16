@@ -13,8 +13,11 @@ import { _limpiarCacheModelos } from "@/lib/validador/extraccion/gemini.server";
 import { normalizarRedaccion, sugerirRedaccionIA } from "@/lib/redaccion-ia.server";
 import { crearCorrector, revisarConDiccionario } from "@/lib/validador/redaccion/corrector";
 import { temaDetieneRevision } from "@/lib/redaccion-tipos";
+import { buscarAparicion } from "@/lib/ir-al-texto";
 import {
   aplicarCorreccion,
+  frasesFueraDeLugar,
+  revisarFormalidad,
   palabrasNoReconocidas,
   revisarOrtografia,
   revisarTema,
@@ -288,5 +291,83 @@ describe("¿Es una tutela de salud? (sin IA)", () => {
   it("con muchas palabras fuera del diccionario, el texto se marca como sin sentido", () => {
     const t = leer("tutela-completa.txt");
     expect(revisarTema(t, { proporcionDesconocidas: 0.6 })?.tipo).toBe("sin_sentido");
+  });
+});
+
+describe("Tono formal y frases fuera de lugar", () => {
+  const completa = leer("tutela-completa.txt");
+  const corte = completa.indexOf("\n\n", completa.length / 2);
+  const conGallinas = `${completa.slice(0, corte)} Las gallinas vuelan altos y el cielo es azul pokemon.${completa.slice(corte)}`;
+
+  it("marca una frase sin relación con el caso y la quita limpiamente", () => {
+    const [c] = frasesFueraDeLugar(conGallinas);
+    expect(c?.original).toBe("Las gallinas vuelan altos y el cielo es azul pokemon.");
+    expect(c?.corregido).toBe("");
+    expect(aplicarCorreccion(conGallinas, c!)).toBe(completa);
+  });
+
+  it("no marca frases de las tutelas de ejemplo (cortesía, firmas, hechos sobre la EPS)", () => {
+    for (const f of ["tutela-completa.txt", "tutela-incompleta.txt", "tutela-agente-oficioso.txt"])
+      expect(frasesFueraDeLugar(leer(f)), f).toEqual([]);
+    expect(
+      frasesFueraDeLugar(
+        "Colpensiones no ha respondido. Gracias por su atención y que Dios le pague.",
+      ),
+    ).toEqual([]);
+  });
+
+  it("señala lenguaje informal u ofensivo y propone la forma respetuosa cuando la hay", () => {
+    const r = revisarFormalidad("Parce, porfa ordénele a esos ladrones de la EPS jajaja!!! 😡");
+    expect(r.correcciones.map((c) => `${c.original}→${c.corregido}`)).toEqual(["porfa→por favor"]);
+    expect(r.avisos.map((a) => a.fragmento)).toEqual(["jajaja", "Parce", "ladrones", "😡", "!!!"]);
+    expect(revisarFormalidad(leer("tutela-completa.txt"))).toEqual({
+      correcciones: [],
+      avisos: [],
+    });
+  });
+
+  it("la IA puede pedir quitar un pedazo (formalidad con corregido vacío), pero no la ortografía", () => {
+    const r = normalizarRedaccion(
+      {
+        tema: { esTutelaDeSalud: true, observacion: "" },
+        correcciones: [
+          {
+            tipo: "formalidad",
+            original: "Las gallinas vuelan altos",
+            corregido: "",
+            motivo: "no tiene relación",
+          },
+          { tipo: "ortografia", original: "cielo", corregido: "", motivo: "x" },
+        ],
+        secciones: [],
+      },
+      conGallinas,
+      "m",
+    );
+    expect(r.correcciones).toEqual([
+      {
+        tipo: "formalidad",
+        original: "Las gallinas vuelan altos",
+        corregido: "",
+        motivo: "no tiene relación",
+      },
+    ]);
+  });
+});
+
+describe("Ver la sugerencia en el texto", () => {
+  const t = "Despues fui a la EPS. Ya despues volví y despuesito me atendieron.";
+
+  it("encuentra la siguiente aparición y vuelve al inicio al llegar al final", () => {
+    const a = buscarAparicion(t, "despues", 0, true)!;
+    expect(t.slice(a.inicio, a.fin)).toBe("Despues");
+    const b = buscarAparicion(t, "despues", a.fin, true)!;
+    expect(b.inicio).toBe(t.indexOf("despues volví"));
+    expect(buscarAparicion(t, "despues", b.fin, true)).toEqual(a);
+  });
+
+  it("sin «palabra completa» busca el fragmento exacto", () => {
+    expect(buscarAparicion(t, "Ya despues volví")?.inicio).toBe(t.indexOf("Ya"));
+    expect(buscarAparicion(t, "no está")).toBeNull();
   });
 });

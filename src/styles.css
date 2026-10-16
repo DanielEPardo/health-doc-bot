@@ -480,6 +480,13 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
 .redaccion-raras ul { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .redaccion-raras li { padding:1px 8px; border-radius:6px; background:color-mix(in oklch, var(--destructive) 10%, transparent); color:var(--destructive); word-break:break-all; }
 .redaccion-correcciones li.es-redaccion { display:grid; gap:4px; }
+.redaccion-ir { all:unset; box-sizing:border-box; cursor:pointer; border-radius:4px; text-align:left; overflow-wrap:anywhere; }
+.redaccion-ir:hover { background:color-mix(in oklch, var(--primary) 10%, transparent); }
+.redaccion-ir:focus-visible { outline:2px solid var(--ring); outline-offset:2px; }
+.redaccion-avisos { display:grid; gap:8px; margin-bottom:10px; }
+.redaccion-avisos li { padding:8px 10px; border-radius:8px; background:color-mix(in oklch, oklch(0.75 0.15 75) 14%, transparent); font-size:14px; }
+.redaccion-avisos p:first-child { display:flex; gap:6px; align-items:flex-start; }
+.redaccion-avisos svg { flex-shrink:0; width:16px; height:16px; margin-top:2px; color:oklch(0.55 0.14 70); }
 .redaccion-antes { font-size:14px; }
 .redaccion-despues { font-size:15px; line-height:1.5; padding:6px 8px; border-left:3px solid var(--primary); background:color-mix(in oklch, var(--primary) 6%, transparent); }
 .redaccion-nota { font-size:13px; color:var(--muted-foreground); margin-top:10px; }
