@@ -47,19 +47,18 @@ export const getEstadoTerminos = createServerFn({ method: "POST" }).handler(asyn
  * Mi perfil). Si la base de datos no responde, se informa como no autorizada.
  */
 export const getEstadoAutorizacionIA = createServerFn({ method: "POST" }).handler(async () => {
-  const [s, { proveedorIADesdeEntorno }, { respaldoOpenRouterDisponible }] = await Promise.all([
+  const [s, { proveedorIADesdeEntorno }] = await Promise.all([
     servidor(),
     import("@/lib/validador/servidor.server"),
-    import("@/lib/redaccion-ia.server"),
   ]);
   const proveedor = proveedorIADesdeEntorno();
-  if (!proveedor) return { proveedor: null, respaldo: false, autorizada: false };
+  if (!proveedor) return { proveedor: null, autorizada: false };
   const autorizada = await (
     await s.almacenDesdeEntorno()
   )
     .tieneConsentimiento(s.usuario, "ia", s.versionVigente("ia"))
     .catch(() => false);
-  return { proveedor, respaldo: respaldoOpenRouterDisponible(), autorizada };
+  return { proveedor, autorizada };
 });
 
 /** ¿Está activo el historial y la persona ya lo autorizó? */
@@ -88,16 +87,14 @@ export const aceptarAcuerdo = createServerFn({ method: "POST" })
     const s = await servidor();
     let texto: string;
     if (data.alcance === "ia") {
-      const [{ proveedorIADesdeEntorno }, { respaldoOpenRouterDisponible }, { puntosAvisoIA }] =
-        await Promise.all([
-          import("@/lib/validador/servidor.server"),
-          import("@/lib/redaccion-ia.server"),
-          import("@/lib/validador/aviso-ia"),
-        ]);
+      const [{ proveedorIADesdeEntorno }, { puntosAvisoIA }] = await Promise.all([
+        import("@/lib/validador/servidor.server"),
+        import("@/lib/validador/aviso-ia"),
+      ]);
       const proveedor = proveedorIADesdeEntorno();
       if (!proveedor) throw new Error("La IA no está disponible en este momento.");
       // Se guarda el aviso completo que la persona vio, con el proveedor vigente.
-      const puntos = puntosAvisoIA(proveedor, "web", { respaldo: respaldoOpenRouterDisponible() });
+      const puntos = puntosAvisoIA(proveedor, "web");
       texto = s.textoAcuerdo(
         s.ACUERDO_IA.titulo,
         puntos.map((p) => `${p.titulo}: ${p.texto}`),

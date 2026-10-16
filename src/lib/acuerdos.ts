@@ -44,7 +44,7 @@ export function textoAcuerdo(titulo: string, puntos: readonly string[]): string 
  */
 export const ACUERDO_TERMINOS = {
   alcance: "terminos",
-  version: "2026-10-11",
+  version: "2026-10-15",
   titulo: "Términos y política de datos",
   puntos: [
     "TuTelaGanas hace una revisión orientativa y automatizada de tutelas de salud: no es asesoría jurídica ni garantiza el resultado.",
@@ -61,7 +61,8 @@ export const ACUERDO_TERMINOS = {
  */
 export const ACUERDO_IA = {
   alcance: "ia",
-  version: "2026-10-15",
+  // Cambia si cambia el proveedor o el aviso (2026-10-15b: OpenRouter con modelos de pago).
+  version: "2026-10-15b",
   titulo: "Uso de inteligencia artificial con mi tutela",
 } as const;
 

@@ -9,7 +9,6 @@ vi.mock("@/lib/historial.functions", () => ({
   getEstadoTerminos: vi.fn(async () => ({ aceptado })),
   getEstadoAutorizacionIA: vi.fn(async () => ({
     proveedor: proveedorIA,
-    respaldo: false,
     autorizada: false,
   })),
   aceptarAcuerdo: (a: unknown) => aceptarAcuerdo(a),

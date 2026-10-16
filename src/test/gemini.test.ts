@@ -201,6 +201,17 @@ describe("Anonimización antes de enviar a la IA", () => {
 describe("Selección de proveedor", () => {
   it("Gemini se activa con la clave (capa gratuita incluida); Claude es la alternativa", () => {
     expect(proveedorIADesdeEntorno({ GEMINI_API_KEY: "k" })).toBe("gemini");
+    // OpenRouter es el proveedor principal: con su clave se usa aunque haya otras.
+    expect(proveedorIADesdeEntorno({ OPENROUTER_API_KEY: "or", GEMINI_API_KEY: "k" })).toBe(
+      "openrouter",
+    );
+    expect(
+      proveedorIADesdeEntorno({
+        OPENROUTER_API_KEY: "or",
+        GEMINI_API_KEY: "k",
+        IA_PROVEEDOR: "gemini",
+      }),
+    ).toBe("gemini");
     expect(proveedorIADesdeEntorno({ ANTHROPIC_API_KEY: "k" })).toBe("anthropic");
     expect(proveedorIADesdeEntorno({ GEMINI_API_KEY: "k", IA_PROVEEDOR: "ninguno" })).toBeNull();
     expect(proveedorIADesdeEntorno({})).toBeNull();
@@ -345,5 +356,32 @@ describe("Selección de proveedor — secretos mal configurados no apagan la IA"
     expect(proveedorIADesdeEntorno({ GEMINI_API_KEY: "k", IA_PROVEEDOR: "si" })).toBe("gemini");
     expect(proveedorIADesdeEntorno({ GEMINI_API_KEY: "k", IA_PROVEEDOR: "ninguno" })).toBeNull();
     expect(proveedorIADesdeEntorno({ GEMINI_API_KEY: "  " })).toBeNull();
+  });
+});
+
+describe("OpenRouter — revisión completa (extracción y análisis jurídico)", () => {
+  it("extrae y analiza con OpenRouter, con el texto anonimizado", async () => {
+    const t = leer("tutela-completa.txt");
+    const cuerpos: string[] = [];
+    const f = vi.fn(async (_url: string, init?: RequestInit) => {
+      const cuerpo = String(init?.body ?? "");
+      cuerpos.push(cuerpo);
+      const nombre = (JSON.parse(cuerpo) as { response_format: { json_schema: { name: string } } })
+        .response_format.json_schema.name;
+      const contenido =
+        nombre === "analisis_juridico"
+          ? { resumen: "Bien estructurada.", observaciones: [] }
+          : { calidad: "nombre_propio", diagnostico: "artrosis" };
+      return json({ choices: [{ message: { content: JSON.stringify(contenido) } }] });
+    });
+    const r = await validarTutela(t, {
+      ia: "openrouter",
+      entorno: { OPENROUTER_API_KEY: "or" },
+      fetch: f as unknown as typeof fetch,
+    });
+    expect(r.modeloIA).toBe("anthropic/claude-haiku-5.5");
+    expect(r.analisisIA?.resumen).toBe("Bien estructurada.");
+    expect(cuerpos).toHaveLength(2);
+    for (const c of cuerpos) expect(c).not.toContain("43.555.123");
   });
 });

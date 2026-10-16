@@ -1,5 +1,5 @@
 /**
- * Validación en el servidor, con IA opcional (Gemini o Claude) en dos pasos:
+ * Validación en el servidor, con IA opcional (OpenRouter; Gemini o Claude como alternativas) en dos pasos:
  *   1. Extracción: la IA lleva los hechos al esquema fijo; las reglas deciden dictamen y puntaje.
  *   2. Análisis jurídico complementario (analisis/juridico.ts): observaciones con base en la
  *      Constitución, la ley y la jurisprudencia del catálogo de fuentes. No cambia el dictamen.
@@ -21,7 +21,7 @@ import {
 } from "./index";
 import { anonimizar, contieneMarcador } from "./extraccion/anonimizar";
 
-export type ProveedorIA = "gemini" | "anthropic";
+export type ProveedorIA = "openrouter" | "gemini" | "anthropic";
 
 type Entorno = Record<string, string | undefined>;
 
@@ -37,7 +37,9 @@ export interface OpcionesValidacion extends Partial<ContextoValidacion> {
 
 /**
  * Decide qué IA usar según las variables de entorno:
- * - IA_PROVEEDOR=gemini|anthropic|ninguno fuerza la elección.
+ * - IA_PROVEEDOR=openrouter|gemini|anthropic|ninguno fuerza la elección.
+ * - OpenRouter (proveedor principal) se activa con OPENROUTER_API_KEY: modelos de pago baratos que
+ *   no guardan ni entrenan con el texto (ver extraccion/openrouter.server.ts).
  * - Gemini se activa con GEMINI_API_KEY (capa gratuita o de pago). El texto siempre se anonimiza
  *   y el usuario debe autorizar el envío (bot: mensaje de autorización; web: autorización única al entrar, registrada como alcance «ia»).
  * - Claude se activa con ANTHROPIC_API_KEY.
@@ -45,17 +47,20 @@ export interface OpcionesValidacion extends Partial<ContextoValidacion> {
  */
 export function proveedorIADesdeEntorno(env: Entorno = process.env): ProveedorIA | null {
   const forzado = env["IA_PROVEEDOR"]?.trim().toLowerCase();
+  const openRouterOk = Boolean(env["OPENROUTER_API_KEY"]?.trim());
   const geminiOk = Boolean(env["GEMINI_API_KEY"]?.trim());
   const claudeOk = Boolean(env["ANTHROPIC_API_KEY"]?.trim());
   // Solo «ninguno» apaga la IA. Si el proveedor forzado no tiene clave (o el valor no es válido),
   // se usa el que sí esté configurado, para que un secreto mal escrito no apague la IA en silencio.
   if (forzado === "ninguno") return null;
+  if (forzado === "openrouter" && openRouterOk) return "openrouter";
   if (forzado === "gemini" && geminiOk) return "gemini";
   if (forzado === "anthropic" && claudeOk) return "anthropic";
-  if (forzado && forzado !== "gemini" && forzado !== "anthropic")
+  if (forzado && !["openrouter", "gemini", "anthropic"].includes(forzado))
     console.warn(
-      `[validador] IA_PROVEEDOR="${forzado}" no es válido (gemini, anthropic o ninguno).`,
+      `[validador] IA_PROVEEDOR="${forzado}" no es válido (openrouter, gemini, anthropic o ninguno).`,
     );
+  if (openRouterOk) return "openrouter";
   if (geminiOk) return "gemini";
   if (claudeOk) return "anthropic";
   return null;
@@ -85,6 +90,15 @@ async function extraerConProveedor(
   env: Entorno,
   f: typeof fetch | undefined,
 ): Promise<{ extraccion: TutelaExtraida; modelo: string }> {
+  if (proveedor === "openrouter") {
+    const { extraerConOpenRouter, opcionesOpenRouter } =
+      await import("./extraccion/openrouter.server");
+    const r = await extraerConOpenRouter(anonimo, opcionesOpenRouter(env, f));
+    return {
+      extraccion: { ...restaurarIdentidad(r.extraccion, local), longitudTexto: texto.length },
+      modelo: r.modelo,
+    };
+  }
   if (proveedor === "gemini") {
     const { extraerConGemini } = await import("./extraccion/gemini.server");
     const r = await extraerConGemini(anonimo, opcionesGemini(env, f));
@@ -123,6 +137,11 @@ async function analizarConProveedor(
 ): Promise<AnalisisJuridicoIA | undefined> {
   if (env["IA_ANALISIS"]?.toLowerCase() === "no") return undefined;
   try {
+    if (proveedor === "openrouter") {
+      const { analizarConOpenRouter, opcionesOpenRouter } =
+        await import("./extraccion/openrouter.server");
+      return await analizarConOpenRouter(anonimo, resultados, opcionesOpenRouter(env, f));
+    }
     if (proveedor === "gemini") {
       const { analizarConGemini } = await import("./extraccion/gemini.server");
       return await analizarConGemini(anonimo, resultados, opcionesGemini(env, f));

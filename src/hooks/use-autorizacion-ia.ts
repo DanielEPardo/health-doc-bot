@@ -6,8 +6,6 @@ import type { ProveedorAviso } from "@/lib/validador/aviso-ia";
 export interface EstadoIA {
   /** Proveedor de IA del servidor; null si no hay IA configurada. */
   proveedor: ProveedorAviso | null;
-  /** ¿Hay respaldo de OpenRouter para la redacción? (se menciona en el aviso) */
-  respaldo: boolean;
   /** ¿La persona ya autorizó el uso de IA? (una sola vez, registrado en el servidor) */
   autorizada: boolean;
 }
@@ -25,7 +23,6 @@ export async function autorizarIA(): Promise<void> {
 export function useAutorizacionIA() {
   const [estado, setEstado] = useState<EstadoIA>({
     proveedor: null,
-    respaldo: false,
     autorizada: false,
   });
 

@@ -5,6 +5,7 @@ import { puntosAvisoIA, type ProveedorAviso } from "@/lib/validador/aviso-ia";
 import type { EstadoIA } from "@/hooks/use-autorizacion-ia";
 
 const NOMBRE: Record<ProveedorAviso, string> = {
+  openrouter: "OpenRouter, con modelos de pago",
   gemini: "Google Gemini",
   anthropic: "Claude (Anthropic)",
 };
@@ -18,21 +19,23 @@ export function ResumenIA({ proveedor }: { proveedor: ProveedorAviso }) {
       <strong>sin tu nombre, cédula, teléfono, correo ni dirección</strong>
       {proveedor === "gemini"
         ? ", al servicio gratuito de Google, que puede usar ese texto para mejorar sus productos."
-        : "."}{" "}
+        : proveedor === "openrouter"
+          ? ", a proveedores que no lo guardan ni lo usan para entrenar sus modelos."
+          : "."}{" "}
       No la guardamos. Es opcional y puedes retirarla en «Mi perfil» → «Mis datos».
     </>
   );
 }
 
 /** Aviso legal completo (desplegable). */
-export function AvisoIA({ proveedor, respaldo }: { proveedor: ProveedorAviso; respaldo: boolean }) {
+export function AvisoIA({ proveedor }: { proveedor: ProveedorAviso }) {
   return (
     <details className="revision-web-ia-aviso">
       <summary>
         <Scale aria-hidden="true" /> Leer el aviso legal sobre el uso de inteligencia artificial
       </summary>
       <dl>
-        {puntosAvisoIA(proveedor, "web", { respaldo }).map((p) => (
+        {puntosAvisoIA(proveedor, "web").map((p) => (
           <div key={p.titulo}>
             <dt>{p.titulo}</dt>
             <dd>{p.texto}</dd>
@@ -90,7 +93,7 @@ export function EstadoAutorizacionIA({
       <p className="revision-web-ia-detalle">
         <ResumenIA proveedor={estado.proveedor} />
       </p>
-      <AvisoIA proveedor={estado.proveedor} respaldo={estado.respaldo} />
+      <AvisoIA proveedor={estado.proveedor} />
       {error && (
         <p role="alert" className="revision-web-aviso">
           {error}

@@ -6,14 +6,17 @@
  * y SIC, Circular Externa 002 de 2024 (datos personales en sistemas de IA).
  */
 
-export type ProveedorAviso = "gemini" | "anthropic";
+export type ProveedorAviso = "openrouter" | "gemini" | "anthropic";
 
 const NOMBRE: Record<ProveedorAviso, string> = {
+  openrouter: "modelos de pago de Anthropic o Google, por medio de OpenRouter",
   gemini: "Google Gemini",
   anthropic: "Claude (Anthropic)",
 };
 
 const DATOS: Record<ProveedorAviso, string> = {
+  openrouter:
+    "Antes de enviarla quitamos tu nombre, cédula, teléfono, correo y dirección. El resto del texto, que incluye información de salud, pasa por OpenRouter (Estados Unidos) y lo procesa el proveedor del modelo (Anthropic o Google) en servidores fuera de Colombia. Usamos un servicio de pago configurado para enviarlo solo a proveedores que no guardan el texto ni lo usan para entrenar sus modelos. Nosotros tampoco lo guardamos.",
   gemini:
     "Antes de enviarla quitamos tu nombre, cédula, teléfono, correo y dirección. El resto del texto, que incluye información de salud, lo procesa Google en servidores fuera de Colombia, en su servicio gratuito: Google puede usarlo para mejorar sus productos y personas de Google pueden leerlo. Nosotros no guardamos el texto.",
   anthropic:
@@ -31,19 +34,11 @@ const SIN_IA = {
   web: "Si no lo autorizas, la revisión se hace solo en tu navegador, sin IA. Si lo autorizas, puedes retirarlo cuando quieras en «Mi perfil» → «Mis datos».",
 } as const;
 
-/** Puntos del aviso, en lenguaje claro. `respaldo`: la web puede usar OpenRouter si el proveedor falla. */
-export function puntosAvisoIA(
-  proveedor: ProveedorAviso,
-  canal: keyof typeof SIN_IA,
-  opciones: { respaldo?: boolean } = {},
-): PuntoAviso[] {
+/** Puntos del aviso, en lenguaje claro. */
+export function puntosAvisoIA(proveedor: ProveedorAviso, canal: keyof typeof SIN_IA): PuntoAviso[] {
   const redaccion =
     canal === "web"
       ? " En esta página también te sugiere correcciones de ortografía y redacción; tú decides si las usas."
-      : "";
-  const respaldo =
-    canal === "web" && opciones.respaldo
-      ? " Para la redacción sugerida, si ese servicio no responde, el mismo texto sin tus datos de identificación puede procesarlo un modelo gratuito por medio de OpenRouter, que según el modelo también puede usarlo para entrenar sus sistemas."
       : "";
   return [
     {
@@ -65,7 +60,7 @@ export function puntosAvisoIA(
       texto:
         "No reemplaza a un abogado, a la Defensoría del Pueblo ni a la Personería. Nada se decide de forma automática sobre tu caso: tú decides qué cambiar y si presentas la tutela, y solo el juez decide.",
     },
-    { titulo: "Tus datos", texto: `${DATOS[proveedor]}${respaldo}` },
+    { titulo: "Tus datos", texto: DATOS[proveedor] },
     {
       titulo: "Es voluntario",
       texto: `No estás obligado(a) a aceptar el análisis con IA. ${SIN_IA[canal]} Puedes revocar tu autorización y pedir que borremos tus datos cuando quieras (Ley 1581 de 2012).`,

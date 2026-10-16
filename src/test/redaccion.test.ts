@@ -11,6 +11,7 @@ import {
 import { anonimizar } from "@/lib/validador/extraccion/anonimizar";
 import { _limpiarCacheModelos } from "@/lib/validador/extraccion/gemini.server";
 import { normalizarRedaccion, sugerirRedaccionIA } from "@/lib/redaccion-ia.server";
+import { MODELOS_OPENROUTER_POR_DEFECTO } from "@/lib/validador/extraccion/openrouter.server";
 import { crearCorrector, revisarConDiccionario } from "@/lib/validador/redaccion/corrector";
 import { temaDetieneRevision } from "@/lib/redaccion-tipos";
 import { buscarAparicion } from "@/lib/ir-al-texto";
@@ -96,38 +97,43 @@ describe("Redacción sugerida con IA", () => {
     expect(r.secciones).toHaveLength(1);
   });
 
-  it("usa Gemini y, si no responde, el respaldo de OpenRouter con esquema JSON", async () => {
+  it("usa OpenRouter con modelos baratos, esquema JSON y sin retención de datos", async () => {
     const pedidas: { url: string; cuerpo: string }[] = [];
     const f = vi.fn(async (url: string, init?: RequestInit) => {
       pedidas.push({ url, cuerpo: String(init?.body ?? "") });
-      if (url.includes("generativelanguage")) return json({ error: { message: "quota" } }, 429);
-      return json({
-        model: "algun/modelo:free",
-        choices: [{ message: { content: JSON.stringify(respuesta) } }],
-      });
+      const { model } = JSON.parse(String(init?.body ?? "{}")) as { model: string };
+      // El primer modelo falla: se prueba el siguiente.
+      if (model === MODELOS_OPENROUTER_POR_DEFECTO[0])
+        return json({ error: { message: "overloaded" } }, 503);
+      return json({ choices: [{ message: { content: JSON.stringify(respuesta) } }] });
     });
     const r = await sugerirRedaccionIA(anonimo, [], {
-      entorno: { GEMINI_API_KEY: "k", GEMINI_MODELOS: "a", OPENROUTER_API_KEY: "or" },
+      entorno: { OPENROUTER_API_KEY: "or", GEMINI_API_KEY: "no-se-usa" },
       fetch: f as unknown as typeof fetch,
     });
-    expect(r.modelo).toBe("algun/modelo:free");
-    const or = pedidas.find((p) => p.url.includes("openrouter.ai"))!;
-    const cuerpo = JSON.parse(or.cuerpo);
-    expect(cuerpo.model).toBe("openrouter/free");
+    expect(r.modelo).toBe(MODELOS_OPENROUTER_POR_DEFECTO[1]);
+    expect(pedidas.every((p) => p.url.includes("openrouter.ai"))).toBe(true);
+    const cuerpo = JSON.parse(pedidas[1]!.cuerpo);
     expect(cuerpo.response_format.type).toBe("json_schema");
-    expect(cuerpo.provider.require_parameters).toBe(true);
-    for (const dato of ["43.555.123", "María Fernanda", "mariaf.rios"])
-      expect(or.cuerpo).not.toContain(dato);
+    expect(cuerpo.provider).toEqual({ require_parameters: true, data_collection: "deny" });
+    for (const p of pedidas)
+      for (const dato of ["43.555.123", "María Fernanda", "mariaf.rios"])
+        expect(p.cuerpo).not.toContain(dato);
   });
 
-  it("sin respaldo configurado, el error de Gemini llega a la persona", async () => {
-    const f = vi.fn(async () => json({ error: { message: "quota" } }, 429));
+  it("OPENROUTER_MODELO cambia los modelos, y si todos fallan el error llega a la persona", async () => {
+    const modelos: string[] = [];
+    const f = vi.fn(async (_url: string, init?: RequestInit) => {
+      modelos.push((JSON.parse(String(init?.body ?? "{}")) as { model: string }).model);
+      return json({ error: { message: "quota" } }, 429);
+    });
     await expect(
       sugerirRedaccionIA(anonimo, [], {
-        entorno: { GEMINI_API_KEY: "k", GEMINI_MODELOS: "a" },
+        entorno: { OPENROUTER_API_KEY: "or", OPENROUTER_MODELO: "x/uno, y/dos" },
         fetch: f as unknown as typeof fetch,
       }),
-    ).rejects.toThrow(/Gemini/);
+    ).rejects.toThrow(/OpenRouter no respondió/);
+    expect(modelos).toEqual(["x/uno", "y/dos"]);
   });
 });
 
@@ -369,5 +375,24 @@ describe("Ver la sugerencia en el texto", () => {
   it("sin «palabra completa» busca el fragmento exacto", () => {
     expect(buscarAparicion(t, "Ya despues volví")?.inicio).toBe(t.indexOf("Ya"));
     expect(buscarAparicion(t, "no está")).toBeNull();
+  });
+});
+
+describe("Mensajes personales dentro del texto", () => {
+  it("encuentra un mensaje de cariño metido en medio de una oración del caso y lo quita", () => {
+    const t =
+      "3. El 8 de agosto de 2026 radiqué la orden médica ante la EPS con el número de mi amor mio te amo muchísimo Papi\nradicado SV-2026-45871.";
+    const [c, ...resto] = revisarFormalidad(t).correcciones;
+    expect(resto).toEqual([]);
+    expect(c?.original).toBe("mi amor mio te amo muchísimo Papi");
+    expect(aplicarCorreccion(t, c!)).toBe(
+      "3. El 8 de agosto de 2026 radiqué la orden médica ante la EPS con el número de\nradicado SV-2026-45871.",
+    );
+  });
+
+  it("«mi papi» solo se cambia por «mi padre» y el trato de «tú» se avisa", () => {
+    const r = revisarFormalidad("Mi papi está hospitalizado. Te pido que ordenes la cirugía.");
+    expect(r.correcciones.map((c) => `${c.original}→${c.corregido}`)).toEqual(["papi→padre"]);
+    expect(r.avisos.map((a) => a.fragmento)).toEqual(["Te"]);
   });
 });

@@ -136,12 +136,12 @@ function Politica() {
               </li>
               <li>
                 <strong>Análisis con IA (opcional):</strong> antes de enviarlo quitamos tu nombre,
-                documento, teléfono, correo y dirección. El texto restante lo procesa Google Gemini
-                en su servicio gratuito, para extraer los elementos de la tutela, escribir
-                observaciones jurídicas y sugerirte correcciones de redacción. En ese servicio
-                Google puede usar el contenido para mejorar sus productos y personas de Google
-                pueden leerlo. No lo guardamos. Te pedimos esta autorización una sola vez y puedes
-                retirarla en «Mi perfil» → «Mis datos».
+                documento, teléfono, correo y dirección. El texto restante pasa por OpenRouter y lo
+                procesa un modelo de pago de Anthropic o Google, para extraer los elementos de la
+                tutela, escribir observaciones jurídicas y sugerirte correcciones de redacción y de
+                tono. Solo se envía a proveedores que no guardan el texto ni lo usan para entrenar
+                sus modelos. Nosotros tampoco lo guardamos. Te pedimos esta autorización una sola
+                vez y puedes retirarla en «Mi perfil» → «Mis datos».
               </li>
               <li>
                 <strong>Historial (opcional):</strong> guardamos el texto, tus respuestas y el
@@ -171,7 +171,7 @@ function Politica() {
                 Este aviso aplica solo si autorizas el análisis con IA, en la web o en WhatsApp.
               </p>
               <dl className="policy-aviso-ia">
-                {puntosAvisoIA("gemini", "web").map((p) => (
+                {puntosAvisoIA("openrouter", "web").map((p) => (
                   <div key={p.titulo}>
                     <dt>{p.titulo}</dt>
                     <dd>{p.texto}</dd>
@@ -199,10 +199,9 @@ function Politica() {
                 </li>
                 <li>Meta (WhatsApp) y Twilio: mensajes, si nos escribes por WhatsApp.</li>
                 <li>
-                  Google (Gemini) o Anthropic (Claude): análisis con IA, redacción sugerida y
-                  lectura de documentos, si los autorizas. Si está activado, OpenRouter procesa la
-                  redacción sugerida cuando Gemini no responde, con el mismo texto sin tus datos de
-                  identificación.
+                  OpenRouter, con modelos de Anthropic (Claude) o Google (Gemini): análisis con IA y
+                  redacción sugerida, si los autorizas, con el texto sin tus datos de
+                  identificación. Anthropic o Google: lectura de documentos, si la autorizas.
                 </li>
               </ul>
               <p>

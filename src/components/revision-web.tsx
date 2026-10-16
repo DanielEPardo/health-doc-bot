@@ -412,7 +412,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
   const [acuerdoDocumentos, setAcuerdoDocumentos] = useState(false);
   const [avisoPDF, setAvisoPDF] = useState("");
   const [continuando, setContinuando] = useState<{ titulo: string; detalle: string } | null>(null);
-  const [redaccionIA, setRedaccionIA] = useState({ disponible: false, respaldo: false });
+  const [redaccionIA, setRedaccionIA] = useState({ disponible: false });
   // Ortografía con diccionario y «¿es una tutela de salud?», sin IA, mientras se escribe.
   const diccionario = useOrtografiaDiccionario(texto);
   const temaLocal = useMemo(() => {
@@ -462,7 +462,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
       .catch(() => activo && setProveedorDocumentos(null));
     getEstadoRedaccion()
       .then((e) => activo && setRedaccionIA(e))
-      .catch(() => activo && setRedaccionIA({ disponible: false, respaldo: false }));
+      .catch(() => activo && setRedaccionIA({ disponible: false }));
     return () => {
       activo = false;
     };

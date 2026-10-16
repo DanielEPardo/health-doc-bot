@@ -25,6 +25,75 @@ const INFORMALES: Array<[RegExp, string, string]> = [
 ];
 
 const EMOJI = /\p{Extended_Pictographic}/u;
+const LETRA = "A-Za-zÁÉÍÓÚÜÑáéíóúüñ";
+
+// ---------------------------------------------------------------------------
+// Mensajes personales metidos en el texto («mi amor te amo muchísimo papi»)
+// ---------------------------------------------------------------------------
+
+/** Expresiones de cariño que no van en una tutela (disparan el aviso). */
+const CARINO =
+  /^(te|amo|adoro|extraño|extrano|amor|papi|mami|papito|mamita|mamacita|cariño|cariñito|besos|besitos|abrazos|tqm|tkm|tka|muak|muack|xoxo)$/i;
+/** Palabras que acompañan esas expresiones y se quitan con ellas. */
+const ACOMPANAN =
+  /^(mi|mis|mio|mío|mia|mía|te|ti|amo|adoro|quiero|extraño|extrano|amor|amores|mucho|muchísimo|muchisimo|tanto|demasiado|siempre|papi|mami|papito|mamita|mamacita|cariño|cariñito|corazón|cielo|bebé|bb|besos|besitos|abrazos|lindo|linda|hermoso|hermosa|precioso|preciosa|tqm|tkm|tka|muak|muack|xoxo)$/i;
+/** Al menos una de estas para que sea un mensaje personal (y no, p. ej., «mi madre»). */
+const MENSAJE =
+  /\b(te (amo|quiero|adoro|extraño)|mi amor|amor m[ií]o|besos|besitos|tqm|tkm|muac?k|xoxo|mi (cielo|vida hermosa|bb))\b/i;
+
+/**
+ * Mensajes personales metidos en medio del texto: se propone quitar el pedazo completo
+ * («de mi amor mio te amo muchísimo Papi radicado» → «de radicado»). Si solo aparece «papi» o
+ * «mami», se propone la palabra formal.
+ */
+function mensajesPersonales(texto: string): Correccion[] {
+  const palabras = [...texto.matchAll(new RegExp(`[${LETRA}]+`, "g"))].map((m) => ({
+    p: m[0],
+    inicio: m.index,
+    fin: m.index + m[0].length,
+  }));
+  const out: Correccion[] = [];
+  const usadas = new Set<number>();
+  palabras.forEach((w, i) => {
+    if (usadas.has(i) || !CARINO.test(w.p)) return;
+    // Solo se une a palabras vecinas separadas por espacios o comas (no cruza puntos ni líneas).
+    const unidas = (a: number, b: number) =>
+      /^[ \t,]*$/.test(texto.slice(palabras[a]!.fin, palabras[b]!.inicio));
+    let a = i;
+    let b = i;
+    while (a > 0 && ACOMPANAN.test(palabras[a - 1]!.p) && unidas(a - 1, a)) a--;
+    while (b < palabras.length - 1 && ACOMPANAN.test(palabras[b + 1]!.p) && unidas(b, b + 1)) b++;
+    const original = texto.slice(palabras[a]!.inicio, palabras[b]!.fin);
+    for (let k = a; k <= b; k++) usadas.add(k);
+    if (MENSAJE.test(original))
+      out.push({
+        original,
+        corregido: "",
+        motivo:
+          "Parece un mensaje personal que quedó dentro de la tutela. Quítalo: el juez solo debe leer los hechos del caso.",
+        tipo: "formalidad",
+      });
+    else
+      // Sin mensaje de cariño: solo «papi» / «mami» se cambian por la palabra formal.
+      for (let k = a; k <= b; k++) {
+        const p = palabras[k]!.p;
+        if (!/^(papi|papito|mami|mamita|mamacita)$/i.test(p)) continue;
+        const formal = /^pap/i.test(p) ? "padre" : "madre";
+        out.push({
+          original: p,
+          corregido: formal,
+          motivo: "palabra familiar: en una tutela se escribe en tono formal",
+          tipo: "formalidad",
+          global: true,
+          base: formal,
+        });
+      }
+  });
+  return out;
+}
+
+/** Trato de «tú» (te, ti, contigo): en una tutela al juez se le habla de usted. */
+const TUTEO = /(?<![A-Za-zÁÉÍÓÚÜÑáéíóúüñ])(tú|ti|contigo|te)(?![A-Za-zÁÉÍÓÚÜÑáéíóúüñ])/gi;
 
 export interface AvisoFormalidad {
   fragmento: string;
@@ -32,8 +101,9 @@ export interface AvisoFormalidad {
 }
 
 /**
- * Lenguaje informal: correcciones con forma respetuosa conocida («porfa» → «por favor») y avisos
- * para lo que hay que reescribir a mano (groserías, muletillas, emojis, signos repetidos).
+ * Lenguaje informal: correcciones con forma respetuosa conocida («porfa» → «por favor»), mensajes
+ * personales para quitar («te amo muchísimo papi») y avisos para lo que hay que reescribir a mano
+ * (groserías, muletillas, trato de «tú», emojis, signos repetidos).
  */
 export function revisarFormalidad(texto: string): {
   correcciones: Correccion[];
@@ -65,6 +135,21 @@ export function revisarFormalidad(texto: string): {
               : `${motivo[0]!.toUpperCase()}${motivo.slice(1)}: quítala o reescribe la frase en tono formal.`,
         });
     }
+  const personales = mensajesPersonales(texto);
+  correcciones.push(...personales);
+  // «te», «tú» fuera de un mensaje personal ya marcado.
+  const dentro = (i: number) =>
+    personales.some((c) => {
+      const j = texto.indexOf(c.original);
+      return j >= 0 && i >= j && i < j + c.original.length;
+    });
+  const tuteo = [...texto.matchAll(TUTEO)].find((m) => !dentro(m.index));
+  if (tuteo)
+    avisos.push({
+      fragmento: tuteo[0],
+      motivo:
+        "Trato de «tú»: en una tutela no se le habla de tú a nadie. Al juez se le trata de usted («le solicito», «usted»).",
+    });
   const emojis = [...texto].filter((c) => EMOJI.test(c));
   if (emojis.length)
     avisos.push({

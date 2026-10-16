@@ -5,11 +5,16 @@
  * - Recibe el texto YA ANONIMIZADO (anonimizar.ts) y solo con la autorización de IA de la persona.
  * - La IA no decide nada: las reglas siguen dando el resultado. Esto son propuestas que la persona
  *   revisa, completa y decide si usa.
- * - Proveedor principal: Gemini (la misma cadena de modelos de la extracción). Respaldo opcional:
- *   OpenRouter (OPENROUTER_API_KEY), con un modelo gratuito que admita respuestas con esquema JSON.
+ * - Proveedor: OpenRouter (OPENROUTER_API_KEY), con los mismos modelos baratos de la revisión
+ *   (extraccion/openrouter.server.ts). Si no hay OpenRouter, Gemini (GEMINI_API_KEY).
  */
 import { contieneMarcador } from "@/lib/validador/extraccion/anonimizar";
 import { generarConGemini } from "@/lib/validador/extraccion/gemini.server";
+import {
+  generarConOpenRouter,
+  openRouterConfigurado,
+  opcionesOpenRouter,
+} from "@/lib/validador/extraccion/openrouter.server";
 
 type Entorno = Record<string, string | undefined>;
 
@@ -82,7 +87,7 @@ Devuelve solo el JSON pedido:
    - "ortografia": revisa el texto PALABRA POR PALABRA e incluye TODOS los errores: letras de más, de menos, cambiadas o invertidas («cuandow» → «cuando», «medicamneto» → «medicamento», «beces» → «veces»), tildes (también las que dependen del contexto: «el» / «él», «esta» / «está», «solicite» / «solicité»), mayúsculas, puntuación y concordancia. "original" de 1 a 15 palabras. No dejes errores sin marcar aunque sean muchos.
    - "redaccion": frases confusas, muy largas, repetidas o desordenadas que el juez podría no entender. Reescríbelas para que se entiendan mejor, en primera persona y con lenguaje claro, SIN agregar ni quitar hechos. "original" puede ser una oración o un párrafo corto (máximo 70 palabras).
    - "formalidad": la tutela la lee un juez, así que revisa TODO el texto (también la mitad de los párrafos) buscando:
-     a) frases o pedazos de frase que no tienen relación con el caso: chistes, comentarios sueltos, texto pegado por error, nombres de juegos o series (por ejemplo «las gallinas vuelan alto y el cielo es azul pokemon»). "original" es exactamente ese pedazo y "corregido" es la cadena vacía "" para quitarlo. Si está metido dentro de una oración del caso, "original" es la oración completa y "corregido" la misma oración sin ese pedazo.
+     a) frases o pedazos de frase que no tienen relación con el caso: chistes, comentarios sueltos, mensajes personales o de cariño, texto pegado por error, nombres de juegos o series. Lee cada oración completa y pregúntate si cada pedazo pertenece a ella: a menudo el pedazo está metido en medio de una oración que sí es del caso. Ejemplos: «las gallinas vuelan alto y el cielo es azul pokemon»; «radiqué la orden con el número de mi amor te amo muchísimo papi radicado SV-2026-45871» (el pedazo es «mi amor te amo muchísimo papi»). "original" es exactamente ese pedazo y "corregido" es la cadena vacía "" para quitarlo.
      b) lenguaje informal o irrespetuoso: palabras coloquiales o de chat («parce», «porfa», «jajaja»), groserías, insultos o calificativos contra la EPS o las personas, sarcasmo, amenazas, emojis, signos repetidos o frases en mayúscula sostenida para gritar. "corregido" es la misma idea en tono formal y respetuoso, en primera persona, sin perder ningún hecho.
      No marques como informales las expresiones de cortesía normales («gracias por su atención», «que Dios le pague») ni la forma sencilla de escribir de la persona si es respetuosa.
    - En todos los casos "original" debe copiarse EXACTAMENTE del texto (con sus errores, mayúsculas y signos) y "motivo" explica el cambio en pocas palabras.
@@ -162,119 +167,47 @@ export function normalizarRedaccion(
 }
 
 // ---------------------------------------------------------------------------
-// Respaldo: OpenRouter (API compatible con OpenAI)
-// ---------------------------------------------------------------------------
-
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-/** Enrutador de modelos gratuitos de OpenRouter; con require_parameters elige uno que admita esquema JSON. */
-export const MODELO_OPENROUTER_POR_DEFECTO = "openrouter/free";
-
-async function redactarConOpenRouter(
-  textoAnonimo: string,
-  pendientes: Pendiente[],
-  env: Entorno,
-  f: typeof fetch,
-): Promise<RedaccionIA> {
-  const modelo = env["OPENROUTER_MODELO"] || MODELO_OPENROUTER_POR_DEFECTO;
-  const abortar = new AbortController();
-  const reloj = setTimeout(() => abortar.abort(), 45_000);
-  try {
-    const r = await f(OPENROUTER_URL, {
-      method: "POST",
-      signal: abortar.signal,
-      headers: {
-        Authorization: `Bearer ${env["OPENROUTER_API_KEY"] ?? ""}`,
-        "Content-Type": "application/json",
-        "X-Title": "TuTelaGanas",
-      },
-      body: JSON.stringify({
-        model: modelo,
-        temperature: 0.2,
-        messages: [
-          { role: "system", content: INSTRUCCIONES_REDACCION },
-          { role: "user", content: peticionRedaccion(textoAnonimo, pendientes) },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: { name: "redaccion_tutela", strict: true, schema: ESQUEMA_REDACCION },
-        },
-        // Solo proveedores que admitan el esquema JSON.
-        provider: { require_parameters: true },
-      }),
-    });
-    const datos = (await r.json().catch(() => ({}))) as {
-      model?: string;
-      choices?: { message?: { content?: string } }[];
-      error?: { message?: string };
-    };
-    if (!r.ok) throw new Error(`OpenRouter ${r.status} ${datos.error?.message ?? ""}`.trim());
-    const contenido = (datos.choices?.[0]?.message?.content ?? "")
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/```\s*$/, "");
-    if (!contenido) throw new Error("OpenRouter sin contenido");
-    return normalizarRedaccion(
-      JSON.parse(contenido) as unknown,
-      textoAnonimo,
-      datos.model ?? modelo,
-    );
-  } catch (err) {
-    if ((err as Error).name === "AbortError") throw new Error("OpenRouter no respondió a tiempo");
-    throw err;
-  } finally {
-    clearTimeout(reloj);
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Punto de entrada
 // ---------------------------------------------------------------------------
 
-export function respaldoOpenRouterDisponible(env: Entorno = process.env): boolean {
-  return Boolean(env["OPENROUTER_API_KEY"]);
-}
-
-/** ¿Hay algún proveedor para la redacción? (Gemini o el respaldo de OpenRouter) */
+/** ¿Hay IA para la redacción? (OpenRouter, o Gemini si no hay OpenRouter) */
 export function redaccionIADisponible(env: Entorno = process.env): boolean {
-  return Boolean(env["GEMINI_API_KEY"]) || respaldoOpenRouterDisponible(env);
+  return openRouterConfigurado(env) || Boolean(env["GEMINI_API_KEY"]?.trim());
 }
 
-/** Pide la redacción a Gemini; si no responde, a OpenRouter (si está configurado). */
+/** Pide la redacción a OpenRouter (proveedor principal) o, si no está configurado, a Gemini. */
 export async function sugerirRedaccionIA(
   textoAnonimo: string,
   pendientes: Pendiente[],
   opciones: { entorno?: Entorno; fetch?: typeof fetch } = {},
 ): Promise<RedaccionIA> {
   const env = opciones.entorno ?? process.env;
-  const f = opciones.fetch ?? fetch;
-  let errorGemini: Error | null = null;
-  if (env["GEMINI_API_KEY"]) {
-    const modelos = env["GEMINI_MODELOS"]
-      ?.split(",")
-      .map((m) => m.trim())
-      .filter(Boolean);
-    try {
-      const r = await generarConGemini(
-        {
-          sistema: INSTRUCCIONES_REDACCION,
-          usuario: peticionRedaccion(textoAnonimo, pendientes),
-          esquema: ESQUEMA_REDACCION as unknown as Record<string, unknown>,
-        },
-        (crudo, modelo) => normalizarRedaccion(crudo, textoAnonimo, modelo),
-        {
-          apiKey: env["GEMINI_API_KEY"],
-          tiempoMaximoMs: 30_000,
-          maxIntentos: 3,
-          ...(modelos?.length ? { modelos } : {}),
-          fetch: f,
-        },
-      );
-      return r.valor;
-    } catch (err) {
-      errorGemini = err as Error;
-      console.warn("[redaccion] Gemini no respondió:", errorGemini.message);
-    }
+  const peticion = {
+    sistema: INSTRUCCIONES_REDACCION,
+    usuario: peticionRedaccion(textoAnonimo, pendientes),
+    esquema: ESQUEMA_REDACCION as unknown as Record<string, unknown>,
+  };
+  const convertir = (crudo: unknown, modelo: string) =>
+    normalizarRedaccion(crudo, textoAnonimo, modelo);
+  if (openRouterConfigurado(env)) {
+    const r = await generarConOpenRouter({ ...peticion, nombre: "redaccion_tutela" }, convertir, {
+      ...opcionesOpenRouter(env, opciones.fetch),
+      tiempoMaximoMs: 45_000,
+    });
+    return r.valor;
   }
-  if (respaldoOpenRouterDisponible(env))
-    return redactarConOpenRouter(textoAnonimo, pendientes, env, f);
-  throw errorGemini ?? new Error("No hay un servicio de IA configurado para la redacción.");
+  if (!env["GEMINI_API_KEY"]?.trim())
+    throw new Error("No hay un servicio de IA configurado para la redacción.");
+  const modelos = env["GEMINI_MODELOS"]
+    ?.split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  const r = await generarConGemini(peticion, convertir, {
+    apiKey: env["GEMINI_API_KEY"],
+    tiempoMaximoMs: 30_000,
+    maxIntentos: 3,
+    ...(modelos?.length ? { modelos } : {}),
+    ...(opciones.fetch ? { fetch: opciones.fetch } : {}),
+  });
+  return r.valor;
 }

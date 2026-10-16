@@ -126,7 +126,7 @@ function DialogoTerminos({ onAceptado }: { onAceptado: () => void }) {
             <p className="terminos-ia-detalle">
               <ResumenIA proveedor={estadoIA.proveedor} />
             </p>
-            <AvisoIA proveedor={estadoIA.proveedor} respaldo={estadoIA.respaldo} />
+            <AvisoIA proveedor={estadoIA.proveedor} />
           </div>
         )}
         {error && (

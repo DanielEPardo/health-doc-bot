@@ -175,11 +175,13 @@ const URL_POLITICA = "https://health-doc-bot.lovable.app/politica-de-datos";
 export const TEXTOS = {
   autorizacion: (url: string, ia: ProveedorIA | null = null) =>
     `👋 Hola, soy el asistente de *TuTelaGanas*.\n\nRevisaré si tu tutela de salud tiene los requisitos del *Decreto 2591 de 1991* y la jurisprudencia de la *Corte Constitucional*. Es una revisión *orientativa*: no reemplaza a un abogado ni garantiza el resultado.\n\n🔒 *Autorización de datos sensibles (Ley 1581 de 2012)*\nTu tutela contiene datos de salud, que son *sensibles*. No estás obligado(a) a autorizar su tratamiento. Si autorizas, usaremos el texto *solo* para esta revisión (lo procesan WhatsApp/Meta y Twilio como encargados), lo borraremos al terminar y guardaremos únicamente el resultado sin tus datos personales.${
-      ia === "gemini"
-        ? "\n\n🤖 *Análisis con IA:* para leer mejor tu tutela y darte observaciones con base en la normativa, enviamos el texto, *sin tu nombre, cédula, teléfono, correo ni dirección*, al servicio gratuito *Google Gemini*. Google puede usar ese texto para mejorar sus productos y personas de Google pueden leerlo (ver el aviso legal sobre IA que te enviamos)."
-        : ia === "anthropic"
-          ? "\n\n🤖 *Análisis con IA:* para leer mejor tu tutela y darte observaciones con base en la normativa, enviamos el texto, *sin tu nombre, cédula, teléfono, correo ni dirección*, a nuestro proveedor de IA (Anthropic) (ver el aviso legal sobre IA que te enviamos)."
-          : ""
+      ia === "openrouter"
+        ? "\n\n🤖 *Análisis con IA:* para leer mejor tu tutela y darte observaciones con base en la normativa, enviamos el texto, *sin tu nombre, cédula, teléfono, correo ni dirección*, a un modelo de IA de pago (Anthropic o Google) por medio de *OpenRouter*, configurado para que no guarde el texto ni lo use para entrenar (ver el aviso legal sobre IA que te enviamos)."
+        : ia === "gemini"
+          ? "\n\n🤖 *Análisis con IA:* para leer mejor tu tutela y darte observaciones con base en la normativa, enviamos el texto, *sin tu nombre, cédula, teléfono, correo ni dirección*, al servicio gratuito *Google Gemini*. Google puede usar ese texto para mejorar sus productos y personas de Google pueden leerlo (ver el aviso legal sobre IA que te enviamos)."
+          : ia === "anthropic"
+            ? "\n\n🤖 *Análisis con IA:* para leer mejor tu tutela y darte observaciones con base en la normativa, enviamos el texto, *sin tu nombre, cédula, teléfono, correo ni dirección*, a nuestro proveedor de IA (Anthropic) (ver el aviso legal sobre IA que te enviamos)."
+            : ""
     } Puedes pedir el borrado en cualquier momento escribiendo *BORRAR*.\nPolítica: ${url}\n\n¿Autorizas el tratamiento de tus datos para esta revisión? Responde *ACEPTO* o *NO*.`,
   noAcepta:
     "Entendido. No trataremos tus datos. Si cambias de opinión, escribe *ACEPTO*. También puedes acudir a la Defensoría del Pueblo o a la Personería de tu municipio.",

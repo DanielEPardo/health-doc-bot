@@ -59,10 +59,12 @@ Lovable sincroniza en dos sentidos con GitHub. El plan actual muestra el editor 
    | `WHATSAPP_VERIFY_TOKEN` | Sí | Texto que tú inventas y pegas en Meta al registrar el webhook |
    | `WHATSAPP_APP_SECRET` | Sí | App Secret (valida la firma de cada mensaje) |
    | `WHATSAPP_MENSAJE_COSTO` | No | Si existe, el bot lo envía antes de pedir la tutela (la FAQ promete informar el costo) |
-   | `GEMINI_API_KEY` | No | Activa el análisis con IA (Google Gemini, capa gratuita o de pago) en el bot y en la web |
+   | `OPENROUTER_API_KEY` | Para la IA | **Proveedor de IA principal** (bot y web): revisión, observaciones jurídicas y redacción sugerida. Usa modelos de pago baratos con `data_collection: deny` (no guardan ni entrenan con el texto). Con esta clave no hace falta `GEMINI_API_KEY`. |
+| `OPENROUTER_MODELO` | No | Modelos de OpenRouter en orden de preferencia, separados por coma. Por defecto `anthropic/claude-haiku-5.5,google/gemini-2.5-flash-lite` (≈ 0,10 USD por millón de tokens de entrada; unos 0,3 centavos de dólar por revisión). |
+| `GEMINI_API_KEY` | No | Alternativa si no hay `OPENROUTER_API_KEY` (Google Gemini, capa gratuita o de pago) |
 | `GEMINI_MODELOS` | No | Lista fija de modelos separados por coma. Si no se pone, se descubren con la API y se ordenan del más nuevo al más viejo |
 | `ANTHROPIC_API_KEY` | No | Alternativa: extracción con Claude |
-| `IA_PROVEEDOR` | No | `ninguno` apaga la IA. `gemini` o `anthropic` eligen proveedor si tiene clave; un valor inválido o sin clave se ignora y se usa el que esté configurado |
+| `IA_PROVEEDOR` | No | `ninguno` apaga la IA. `openrouter`, `gemini` o `anthropic` eligen proveedor si tiene clave; un valor inválido o sin clave se ignora y se usa el que esté configurado (primero OpenRouter) |
 | `IA_ANALISIS` | No | `no` desactiva solo el análisis jurídico complementario (deja la extracción con IA). Útil si el canal tiene un tiempo de espera corto (Twilio: 15 s) |
 | `CLERK_PUBLISHABLE_KEY` | Sí (ya existe) | También se usa en el servidor para verificar la sesión (IA, historial, documentos) |
 | `HISTORIAL_CLAVE` | Para el historial | 32 bytes en base64 para cifrar las tutelas guardadas. Generar con `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. **Si se pierde o cambia, las tutelas guardadas no se pueden leer.** Sin ella, la opción de historial no aparece. |
@@ -70,8 +72,6 @@ Lovable sincroniza en dos sentidos con GitHub. El plan actual muestra el editor 
 | `GEMINI_FACTURACION` | Si `DOCUMENTOS_IA_PROVEEDOR=gemini` | Debe ser `activa`, y solo después de activar la facturación en Google AI Studio: la capa gratuita puede usar el contenido y no sirve para documentos que no se pueden anonimizar. |
 | `CLERK_WEBHOOK_SECRET` | Para el historial | «Signing secret» (`whsec_…`) del webhook de Clerk. Registrar en Clerk → Webhooks la URL `https://<dominio>/api/clerk-webhook` con el evento `user.deleted`, para borrar el historial cuando alguien elimina su cuenta. |
 | `TWILIO_ACCOUNT_SID` | Para PDF por Twilio | Account SID (`AC…`) de la consola de Twilio. Sin él, el bot de Twilio responde que no pudo abrir el PDF y pide el texto. |
-| `OPENROUTER_API_KEY` | No | Respaldo de la redacción sugerida cuando Gemini no responde (modelos gratuitos de OpenRouter que admiten esquema JSON). Si se activa, el aviso de IA de la web lo menciona. |
-| `OPENROUTER_MODELO` | No | Modelo de OpenRouter (por defecto `openrouter/free`). |
 | `HISTORIAL_ALMACEN` | Solo local | `memoria` guarda historial y autorizaciones en memoria (sin Supabase). No usar en producción. |
 
 **Respaldo entre modelos de Gemini.** El sistema pide a Google la lista de modelos disponibles para la clave y los ordena del más nuevo al más viejo (hoy: 3.8 Flash → 3.7 → 3.6 → 3.5 Flash → 3.5 Flash-Lite → 3.1 Flash-Lite → 2.5 Flash → 2.5 Flash-Lite → 2.5 Pro). Si un modelo está caído, saturado (429/503), no responde en 10 s, no existe para la clave o devuelve una respuesta inválida, pasa al siguiente; un modelo que falló se salta durante 2 minutos para que las siguientes revisiones sean rápidas. Solo se detiene si la clave es inválida. Si ninguno responde, se entrega la revisión heurística (el usuario nunca se queda sin respuesta). Probado con la API real el 9-oct-2026: 3.8 Flash respondió "alta demanda" (503), 3.7 no respondió a tiempo y 3.6 entregó el resultado.
@@ -104,7 +104,7 @@ npx vitest run
 npx tsc --noEmit
 ```
 
-Para `vite dev` local, pon tus variables en `.env.local` (ignorado por git): `CLERK_PUBLISHABLE_KEY` y, si quieres IA, `GEMINI_API_KEY`. También hacen falta `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` (en Lovable se inyectan solas).
+Para `vite dev` local, pon tus variables en `.env.local` (ignorado por git): `CLERK_PUBLISHABLE_KEY` y, si quieres IA, `OPENROUTER_API_KEY`. También hacen falta `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` (en Lovable se inyectan solas).
 
 ### Probar el bot de WhatsApp en local (sin Lovable ni Supabase)
 

@@ -14,11 +14,10 @@ export interface RedaccionPublica {
   modelo: string;
 }
 
-/** ¿Hay IA para la redacción y hay respaldo de OpenRouter? (no expone claves) */
+/** ¿Hay IA para la redacción? (no expone claves) */
 export const getEstadoRedaccion = createServerFn({ method: "GET" }).handler(async () => {
-  const { redaccionIADisponible, respaldoOpenRouterDisponible } =
-    await import("@/lib/redaccion-ia.server");
-  return { disponible: redaccionIADisponible(), respaldo: respaldoOpenRouterDisponible() };
+  const { redaccionIADisponible } = await import("@/lib/redaccion-ia.server");
+  return { disponible: redaccionIADisponible() };
 });
 
 let dentroDelLimite: ((usuario: string) => boolean) | undefined;

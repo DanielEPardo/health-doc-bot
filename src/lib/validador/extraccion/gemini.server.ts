@@ -270,6 +270,16 @@ export async function generarConGemini<T>(
 const MARCADORES_GEMINI =
   '\n- El texto viene anonimizado: [NOMBRE], [DOCUMENTO], [TELÉFONO], [CORREO] y [DIRECCIÓN] indican que el dato SÍ está en la tutela original. Registra el marcador tal cual en el campo correspondiente (p. ej. accionante.nombre = "[NOMBRE]").';
 
+/** Instrucciones de extracción para modelos que responden con JSON (Gemini, OpenRouter). */
+export function sistemaExtraccionJSON(): string {
+  return INSTRUCCIONES_EXTRACCION.replace(
+    "con la herramienta registrar_extraccion",
+    "en el JSON de respuesta",
+  )
+    .replace("Llama a registrar_extraccion exactamente una vez.", "Responde solo con el JSON.")
+    .concat(MARCADORES_GEMINI);
+}
+
 /**
  * Extrae con Gemini probando los modelos en orden hasta que uno responda.
  * `texto` debe llegar YA anonimizado (ver anonimizar.ts).
@@ -278,15 +288,9 @@ export async function extraerConGemini(
   texto: string,
   opciones: OpcionesGemini,
 ): Promise<ResultadoGemini> {
-  const sistema = INSTRUCCIONES_EXTRACCION.replace(
-    "con la herramienta registrar_extraccion",
-    "en el JSON de respuesta",
-  )
-    .replace("Llama a registrar_extraccion exactamente una vez.", "Responde solo con el JSON.")
-    .concat(MARCADORES_GEMINI);
   const r = await generarConGemini(
     {
-      sistema,
+      sistema: sistemaExtraccionJSON(),
       usuario: `<tutela>\n${texto}\n</tutela>\n\nExtrae los elementos de esta tutela.`,
       esquema: ESQUEMA_EXTRACCION as Esquema,
     },
