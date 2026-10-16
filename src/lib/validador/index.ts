@@ -22,6 +22,7 @@ export {
 export {
   revisarOrtografia,
   revisarTema,
+  palabrasNoReconocidas,
   aplicarCorreccion,
   correccionVigente,
 } from "./redaccion/ortografia";

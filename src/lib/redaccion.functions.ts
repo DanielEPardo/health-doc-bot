@@ -37,16 +37,21 @@ export const sugerirRedaccion = createServerFn({ method: "POST" })
     return { texto: d.texto, pendientes };
   })
   .handler(async ({ data }): Promise<RedaccionPublica> => {
-    const [{ usuarioDeLaSolicitud, crearLimitador }, ia, { anonimizar }, { extraerHeuristico }] =
-      await Promise.all([
-        import("@/lib/sesion.server"),
-        import("@/lib/redaccion-ia.server"),
-        import("@/lib/validador/extraccion/anonimizar"),
-        import("@/lib/validador"),
-      ]);
+    const [
+      { usuarioDeLaSolicitud, crearLimitador, exigirAutorizacionIA: usuarioYaAutorizo },
+      ia,
+      { anonimizar },
+      { extraerHeuristico },
+    ] = await Promise.all([
+      import("@/lib/sesion.server"),
+      import("@/lib/redaccion-ia.server"),
+      import("@/lib/validador/extraccion/anonimizar"),
+      import("@/lib/validador"),
+    ]);
     const usuario = await usuarioDeLaSolicitud().catch((e: Error) => {
       throw new Error(`${e.message.replace(/\.$/, "")} para usar la redacción con IA.`);
     });
+    await usuarioYaAutorizo(usuario);
     dentroDelLimite ??= crearLimitador(5, 60_000);
     if (!dentroDelLimite(usuario))
       throw new Error(

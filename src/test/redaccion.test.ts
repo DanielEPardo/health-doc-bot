@@ -11,7 +11,12 @@ import {
 import { anonimizar } from "@/lib/validador/extraccion/anonimizar";
 import { _limpiarCacheModelos } from "@/lib/validador/extraccion/gemini.server";
 import { normalizarRedaccion, sugerirRedaccionIA } from "@/lib/redaccion-ia.server";
-import { aplicarCorreccion, revisarOrtografia, revisarTema } from "@/lib/validador";
+import {
+  aplicarCorreccion,
+  palabrasNoReconocidas,
+  revisarOrtografia,
+  revisarTema,
+} from "@/lib/validador";
 
 const leer = (n: string) => readFileSync(path.join(process.cwd(), "src/test/fixtures", n), "utf8");
 const FECHA = new Date("2026-10-15T12:00:00-05:00");
@@ -178,5 +183,30 @@ describe("Ortografía y tema sin IA", () => {
       observacion: "Es una carta de queja, no una tutela.",
     });
     expect(r.correcciones[0]?.tipo).toBe("redaccion");
+  });
+});
+
+describe("Texto sin sentido", () => {
+  const basura =
+    "Quiero comer jandkjwrjknqwknqwkdnqwkemqkwlenqklw jbefbwjelknrfkljwenfrklwendflkenwfklnwefklnweklfnwe wnfklqnwfklqwndfklqnfklnqwfklnwfklnewfknqwkfnwkfnqwklfnkqwnfklqwnfkenfkqwnfklenfknq";
+
+  it("marca las palabras que no parecen español", () => {
+    const raras = palabrasNoReconocidas(basura);
+    expect(raras.length).toBeGreaterThanOrEqual(3);
+    expect(raras.join(" ")).not.toMatch(/Quiero|comer/);
+  });
+
+  it("no marca palabras normales de una tutela (incluidas siglas y palabras largas)", () => {
+    for (const f of ["tutela-completa.txt", "tutela-incompleta.txt", "tutela-agente-oficioso.txt"])
+      expect(palabrasNoReconocidas(leer(f)), f).toEqual([]);
+    expect(
+      palabrasNoReconocidas(
+        "La inconstitucionalidad y la responsabilidad de la EPS con el MIPRES y la construcción del instrumento abstracto.",
+      ),
+    ).toEqual([]);
+  });
+
+  it("si casi todo es texto sin sentido, el tema lo dice", () => {
+    expect(revisarTema(basura)?.observacion).toMatch(/no tiene palabras que podamos entender/);
   });
 });

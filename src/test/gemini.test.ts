@@ -333,3 +333,17 @@ describe("Análisis jurídico con IA (complementario)", () => {
     expect(texto).not.toContain("T-999-2099");
   });
 });
+
+describe("Selección de proveedor — secretos mal configurados no apagan la IA", () => {
+  it("usa el proveedor que sí tiene clave si el forzado no la tiene o el valor no es válido", () => {
+    expect(proveedorIADesdeEntorno({ GEMINI_API_KEY: "k", IA_PROVEEDOR: "anthropic" })).toBe(
+      "gemini",
+    );
+    expect(proveedorIADesdeEntorno({ GEMINI_API_KEY: "k", IA_PROVEEDOR: " Gemini " })).toBe(
+      "gemini",
+    );
+    expect(proveedorIADesdeEntorno({ GEMINI_API_KEY: "k", IA_PROVEEDOR: "si" })).toBe("gemini");
+    expect(proveedorIADesdeEntorno({ GEMINI_API_KEY: "k", IA_PROVEEDOR: "ninguno" })).toBeNull();
+    expect(proveedorIADesdeEntorno({ GEMINI_API_KEY: "  " })).toBeNull();
+  });
+});

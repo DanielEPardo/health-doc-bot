@@ -29,7 +29,8 @@ export const revisarConIA = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data }): Promise<ResultadoPublico> => {
-    const { usuarioDeLaSolicitud, crearLimitador } = await import("@/lib/sesion.server");
+    const { usuarioDeLaSolicitud, crearLimitador, exigirAutorizacionIA } =
+      await import("@/lib/sesion.server");
     const { proveedorIADesdeEntorno, validarTutela } =
       await import("@/lib/validador/servidor.server");
     const { normalizarDeclarados } = await import("@/lib/validador");
@@ -37,6 +38,7 @@ export const revisarConIA = createServerFn({ method: "POST" })
     const usuario = await usuarioDeLaSolicitud().catch((e: Error) => {
       throw new Error(`${e.message.replace(/\.$/, "")} para usar el análisis con IA.`);
     });
+    await exigirAutorizacionIA(usuario);
     dentroDelLimite ??= crearLimitador(5, 60_000);
     if (!dentroDelLimite(usuario))
       throw new Error("Hiciste muchas revisiones seguidas. Espera un minuto e inténtalo de nuevo.");

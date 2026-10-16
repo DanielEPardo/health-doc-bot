@@ -137,9 +137,11 @@ function Politica() {
               <li>
                 <strong>Análisis con IA (opcional):</strong> antes de enviarlo quitamos tu nombre,
                 documento, teléfono, correo y dirección. El texto restante lo procesa Google Gemini
-                en su servicio gratuito, solo para extraer los elementos de la tutela y escribir
-                observaciones jurídicas sobre ella. En ese servicio Google puede usar el contenido
-                para mejorar sus productos y personas de Google pueden leerlo. No lo guardamos.
+                en su servicio gratuito, para extraer los elementos de la tutela, escribir
+                observaciones jurídicas y sugerirte correcciones de redacción. En ese servicio
+                Google puede usar el contenido para mejorar sus productos y personas de Google
+                pueden leerlo. No lo guardamos. Te pedimos esta autorización una sola vez y puedes
+                retirarla en «Mi perfil» → «Mis datos».
               </li>
               <li>
                 <strong>Historial (opcional):</strong> guardamos el texto, tus respuestas y el

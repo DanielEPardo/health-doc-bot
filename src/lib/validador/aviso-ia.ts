@@ -1,7 +1,7 @@
 /**
  * Aviso legal sobre el uso de inteligencia artificial. Lo comparten el bot de WhatsApp
  * (se envía antes de pedir la autorización y queda en la constancia del consentimiento)
- * y la web (/revision, junto a la casilla de autorización). Fundamento en
+ * y la web (se muestra al pedir la autorización de IA, una sola vez, y en /revision). Fundamento en
  * docs/validador/06-proteccion-de-datos.md: Ley 1581 de 2012 (arts. 4 lit. e, 5, 6 y 26)
  * y SIC, Circular Externa 002 de 2024 (datos personales en sistemas de IA).
  */
@@ -28,7 +28,7 @@ export interface PuntoAviso {
 const SIN_IA = {
   whatsapp:
     "Si prefieres que no usemos IA, no aceptes y revisa tu tutela en https://health-doc-bot.lovable.app/revision, donde la revisión se hace solo en tu navegador.",
-  web: "Si no marcas la casilla, la revisión se hace solo en tu navegador, sin IA.",
+  web: "Si no lo autorizas, la revisión se hace solo en tu navegador, sin IA. Si lo autorizas, puedes retirarlo cuando quieras en «Mi perfil» → «Mis datos».",
 } as const;
 
 /** Puntos del aviso, en lenguaje claro. `respaldo`: la web puede usar OpenRouter si el proveedor falla. */

@@ -16,6 +16,7 @@ import {
   aplicarCorreccion,
   correccionVigente,
   extraerHeuristico,
+  palabrasNoReconocidas,
   revisarOrtografia,
   revisarTema,
   pendientesPorCompletar,
@@ -188,6 +189,7 @@ export function RedaccionSugerida({
   const [error, setError] = useState("");
 
   const ortografia = useMemo(() => revisarOrtografia(texto), [texto]);
+  const raras = useMemo(() => palabrasNoReconocidas(texto), [texto]);
   const temaLocal = useMemo(() => revisarTema(texto), [texto]);
   const plantillas = useMemo(
     () =>
@@ -266,8 +268,8 @@ export function RedaccionSugerida({
           </Button>
           {!iaAutorizada && (
             <p className="redaccion-motivo">
-              Para usarla, marca abajo la casilla «Autorizo el análisis con IA». El texto se envía
-              sin tu nombre, cédula, teléfono, correo ni dirección.
+              Para usarla, autoriza el uso de IA en la tarjeta de abajo (solo se pide una vez). El
+              texto se envía sin tu nombre, cédula, teléfono, correo ni dirección.
             </p>
           )}
           {error && (
@@ -284,10 +286,25 @@ export function RedaccionSugerida({
             <h4>
               <SpellCheck aria-hidden="true" /> Ortografía
             </h4>
+            {raras.length > 0 && (
+              <div className="redaccion-raras">
+                <p>
+                  <AlertTriangle aria-hidden="true" /> Estas palabras no parecen español. Revisa si
+                  están bien escritas:
+                </p>
+                <ul>
+                  {raras.map((p) => (
+                    <li key={p}>{p}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {ortografia.length + iaOrtografia.length === 0 ? (
               <p className="redaccion-motivo">
-                <Check aria-hidden="true" /> No vemos errores frecuentes.
-                {iaDisponible && !ia ? " La IA puede encontrar otros según el contexto." : ""}
+                <Check aria-hidden="true" /> No encontramos errores frecuentes de tildes o
+                mayúsculas. Las palabras subrayadas en rojo dentro del cuadro las marca tu
+                navegador.
+                {iaDisponible && !ia ? " Para una revisión completa, usa la IA." : ""}
               </p>
             ) : (
               <ListaCorrecciones

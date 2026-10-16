@@ -17,6 +17,7 @@ import {
 import {
   ACUERDO_DOCUMENTOS,
   ACUERDO_HISTORIAL,
+  ACUERDO_IA,
   ACUERDO_TERMINOS,
   type Alcance,
 } from "@/lib/acuerdos";
@@ -132,6 +133,11 @@ const NOMBRE_AUTORIZACION: Record<Alcance, { titulo: string; retirar: string | n
     titulo: ACUERDO_HISTORIAL.titulo,
     retirar:
       "Dejaremos de guardar tus tutelas y BORRAREMOS las que ya están en tu historial. Esto no se puede deshacer.",
+  },
+  ia: {
+    titulo: ACUERDO_IA.titulo,
+    retirar:
+      "Dejaremos de usar IA con tus tutelas: la revisión se hará solo en tu navegador y no verás las observaciones ni la redacción con IA, hasta que la autorices de nuevo.",
   },
   documentos: {
     titulo: ACUERDO_DOCUMENTOS.titulo,

@@ -54,14 +54,27 @@ export const ACUERDO_TERMINOS = {
   ],
 } as const;
 
+/**
+ * Uso de inteligencia artificial en la web (revisión, observaciones y redacción sugerida).
+ * Se pide UNA vez (opcional) y queda registrada; después la IA se usa sin volver a preguntar.
+ * El texto del aviso está en src/lib/validador/aviso-ia.ts (puntosAvisoIA).
+ */
+export const ACUERDO_IA = {
+  alcance: "ia",
+  version: "2026-10-15",
+  titulo: "Uso de inteligencia artificial con mi tutela",
+} as const;
+
 export type Alcance =
   | (typeof ACUERDO_HISTORIAL)["alcance"]
   | (typeof ACUERDO_DOCUMENTOS)["alcance"]
-  | (typeof ACUERDO_TERMINOS)["alcance"];
+  | (typeof ACUERDO_TERMINOS)["alcance"]
+  | (typeof ACUERDO_IA)["alcance"];
 
-export const ALCANCES: readonly Alcance[] = ["historial", "documentos", "terminos"];
+export const ALCANCES: readonly Alcance[] = ["historial", "documentos", "terminos", "ia"];
 
 export function versionVigente(alcance: Alcance): string {
+  if (alcance === "ia") return ACUERDO_IA.version;
   if (alcance === "terminos") return ACUERDO_TERMINOS.version;
   return alcance === "historial" ? ACUERDO_HISTORIAL.version : ACUERDO_DOCUMENTOS.version;
 }

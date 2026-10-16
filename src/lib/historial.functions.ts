@@ -42,6 +42,26 @@ export const getEstadoTerminos = createServerFn({ method: "POST" }).handler(asyn
   };
 });
 
+/**
+ * ¿Hay IA en el servidor y la persona ya autorizó usarla? (una sola vez; se puede retirar en
+ * Mi perfil). Si la base de datos no responde, se informa como no autorizada.
+ */
+export const getEstadoAutorizacionIA = createServerFn({ method: "POST" }).handler(async () => {
+  const [s, { proveedorIADesdeEntorno }, { respaldoOpenRouterDisponible }] = await Promise.all([
+    servidor(),
+    import("@/lib/validador/servidor.server"),
+    import("@/lib/redaccion-ia.server"),
+  ]);
+  const proveedor = proveedorIADesdeEntorno();
+  if (!proveedor) return { proveedor: null, respaldo: false, autorizada: false };
+  const autorizada = await (
+    await s.almacenDesdeEntorno()
+  )
+    .tieneConsentimiento(s.usuario, "ia", s.versionVigente("ia"))
+    .catch(() => false);
+  return { proveedor, respaldo: respaldoOpenRouterDisponible(), autorizada };
+});
+
 /** ¿Está activo el historial y la persona ya lo autorizó? */
 export const getEstadoHistorial = createServerFn({ method: "POST" }).handler(async () => {
   const s = await servidor();
@@ -60,14 +80,29 @@ export const getEstadoHistorial = createServerFn({ method: "POST" }).handler(asy
 /** Registra la autorización con el texto exacto que la persona aceptó (prueba, Ley 1581). */
 export const aceptarAcuerdo = createServerFn({ method: "POST" })
   .inputValidator((d: { alcance: Alcance }) => {
-    if (!["historial", "documentos", "terminos"].includes(d?.alcance))
+    if (!["historial", "documentos", "terminos", "ia"].includes(d?.alcance))
       throw new Error("Autorización desconocida.");
     return { alcance: d.alcance };
   })
   .handler(async ({ data }) => {
     const s = await servidor();
     let texto: string;
-    if (data.alcance === "terminos") {
+    if (data.alcance === "ia") {
+      const [{ proveedorIADesdeEntorno }, { respaldoOpenRouterDisponible }, { puntosAvisoIA }] =
+        await Promise.all([
+          import("@/lib/validador/servidor.server"),
+          import("@/lib/redaccion-ia.server"),
+          import("@/lib/validador/aviso-ia"),
+        ]);
+      const proveedor = proveedorIADesdeEntorno();
+      if (!proveedor) throw new Error("La IA no está disponible en este momento.");
+      // Se guarda el aviso completo que la persona vio, con el proveedor vigente.
+      const puntos = puntosAvisoIA(proveedor, "web", { respaldo: respaldoOpenRouterDisponible() });
+      texto = s.textoAcuerdo(
+        s.ACUERDO_IA.titulo,
+        puntos.map((p) => `${p.titulo}: ${p.texto}`),
+      );
+    } else if (data.alcance === "terminos") {
       texto = s.textoAcuerdo(s.ACUERDO_TERMINOS.titulo, s.ACUERDO_TERMINOS.puntos);
     } else if (data.alcance === "historial") {
       texto = s.textoAcuerdo(s.ACUERDO_HISTORIAL.titulo, s.ACUERDO_HISTORIAL.puntos);
@@ -208,7 +243,7 @@ export const listarAutorizaciones = createServerFn({ method: "POST" }).handler(
  */
 export const revocarAutorizacion = createServerFn({ method: "POST" })
   .inputValidator((d: { alcance: Alcance }) => {
-    if (d?.alcance !== "historial" && d?.alcance !== "documentos")
+    if (d?.alcance !== "historial" && d?.alcance !== "documentos" && d?.alcance !== "ia")
       throw new Error("Autorización desconocida.");
     return { alcance: d.alcance };
   })

@@ -36,12 +36,8 @@ import {
   type PrioridadObservacion,
   type ResultadoRegla,
 } from "@/lib/validador";
-import {
-  NOTA_OBSERVACIONES_IA,
-  puntosAvisoIA,
-  type ProveedorAviso,
-} from "@/lib/validador/aviso-ia";
-import { getEstadoIA, revisarConIA, type ResultadoPublico } from "@/lib/revision-ia.functions";
+import { NOTA_OBSERVACIONES_IA } from "@/lib/validador/aviso-ia";
+import { revisarConIA, type ResultadoPublico } from "@/lib/revision-ia.functions";
 import { getEstadoDocumentos } from "@/lib/documentos.functions";
 import { cabecerasDeSesion, motivoDe } from "@/lib/navegador";
 import {
@@ -51,6 +47,8 @@ import {
 import { SubirPDF } from "@/components/subir-pdf";
 import { ListaAnexos } from "@/components/lista-anexos";
 import { GuardarEnHistorial } from "@/components/guardar-historial";
+import { EstadoAutorizacionIA } from "@/components/autorizacion-ia";
+import { useAutorizacionIA } from "@/hooks/use-autorizacion-ia";
 import { RedaccionSugerida } from "@/components/redaccion-sugerida";
 import { getEstadoRedaccion } from "@/lib/redaccion.functions";
 import { useHistorial } from "@/hooks/use-historial";
@@ -123,11 +121,6 @@ const PRIORIDAD: Record<PrioridadObservacion, string> = {
   media: "Para mejorar",
   baja: "Sugerencia",
 };
-const NOMBRE_PROVEEDOR: Record<ProveedorAviso, string> = {
-  gemini: "Google Gemini",
-  anthropic: "Claude (Anthropic)",
-};
-
 /** H10 — Ayuda breve: partes mínimas de una tutela (Decreto 2591 de 1991, art. 14 y 37). */
 const PARTES_TUTELA = [
   "Juez al que va dirigida y entidad accionada (tu EPS).",
@@ -394,9 +387,11 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
     res: ResultadoPublico | null;
     id: string | null;
   } | null>(null);
-  const [proveedorIA, setProveedorIA] = useState<ProveedorAviso | null>(null);
+  // IA: se autoriza una sola vez (ventana de términos o tarjeta de abajo) y luego se usa siempre.
+  const { estado: estadoIA, autorizar: autorizarIA } = useAutorizacionIA();
+  const proveedorIA = estadoIA.proveedor;
   const iaDisponible = proveedorIA !== null;
-  const [usarIA, setUsarIA] = useState(false);
+  const usarIA = estadoIA.autorizada;
   const [cargando, setCargando] = useState(false);
   const [avisoIA, setAvisoIA] = useState("");
   const [declarados, setDeclarados] = useState<DocumentosDeclarados | null>(null);
@@ -415,9 +410,6 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
   // ¿El servidor tiene IA configurada? Si no, la opción ni se muestra (H8).
   useEffect(() => {
     let activo = true;
-    getEstadoIA()
-      .then((e) => activo && setProveedorIA(e.proveedor ?? null))
-      .catch(() => activo && setProveedorIA(null));
     getEstadoDocumentos()
       .then((e) => activo && setProveedorDocumentos(e.proveedor))
       .catch(() => activo && setProveedorDocumentos(null));
@@ -600,6 +592,8 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
             aria-describedby={idAyuda}
             aria-invalid={aviso ? true : undefined}
             className="revision-web-texto"
+            lang="es-CO"
+            spellCheck
             placeholder="Señor Juez… Yo, [nombre], identificado(a) con cédula… HECHOS… PRETENSIONES…"
             value={texto}
             onChange={(e) => {
@@ -640,43 +634,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
         acuerdoDocumentos={acuerdoDocumentos}
         onAcuerdoDocumentos={() => setAcuerdoDocumentos(true)}
       />
-      {proveedorIA && (
-        <div className="revision-web-ia">
-          <label className="revision-web-ia-opcion">
-            <input type="checkbox" checked={usarIA} onChange={(e) => setUsarIA(e.target.checked)} />
-            <span>
-              <Sparkles aria-hidden="true" /> Autorizo el análisis con IA (
-              {NOMBRE_PROVEEDOR[proveedorIA]}) de mi tutela y acepto el aviso legal sobre su uso
-            </span>
-          </label>
-          {/* Consentimiento informado (Ley 1581): qué se envía, a quién, con qué riesgo y qué decide la IA. */}
-          <p className="revision-web-ia-detalle">
-            La IA te da observaciones con base en la Constitución, la ley y la jurisprudencia, pero
-            no decide el resultado y puede equivocarse. Enviamos tu tutela{" "}
-            <strong>sin nombre, cédula, teléfono, correo ni dirección</strong>
-            {proveedorIA === "gemini"
-              ? " al servicio gratuito de Google Gemini: Google puede usar ese texto para mejorar sus productos y personas de Google pueden leerlo."
-              : " a Anthropic."}
-            {redaccionIA.respaldo &&
-              " Para la redacción sugerida, si ese servicio no responde, el mismo texto sin datos personales puede procesarlo un modelo gratuito por medio de OpenRouter, en condiciones parecidas."}{" "}
-            No lo guardamos.
-          </p>
-          <details className="revision-web-ia-aviso">
-            <summary>
-              <Scale aria-hidden="true" /> Leer el aviso legal sobre el uso de inteligencia
-              artificial
-            </summary>
-            <dl>
-              {puntosAvisoIA(proveedorIA, "web", { respaldo: redaccionIA.respaldo }).map((p) => (
-                <div key={p.titulo}>
-                  <dt>{p.titulo}</dt>
-                  <dd>{p.texto}</dd>
-                </div>
-              ))}
-            </dl>
-          </details>
-        </div>
-      )}
+      <EstadoAutorizacionIA estado={estadoIA} onAutorizar={autorizarIA} />
       {cargando && (
         <p className="revision-web-cargando" role="status">
           <Loader2 aria-hidden="true" className="animate-spin" /> Analizando con IA… Si el modelo

@@ -39,17 +39,23 @@ export interface OpcionesValidacion extends Partial<ContextoValidacion> {
  * Decide qué IA usar según las variables de entorno:
  * - IA_PROVEEDOR=gemini|anthropic|ninguno fuerza la elección.
  * - Gemini se activa con GEMINI_API_KEY (capa gratuita o de pago). El texto siempre se anonimiza
- *   y el usuario debe autorizar el envío (bot: mensaje de autorización; web: casilla).
+ *   y el usuario debe autorizar el envío (bot: mensaje de autorización; web: autorización única al entrar, registrada como alcance «ia»).
  * - Claude se activa con ANTHROPIC_API_KEY.
  * - IA_ANALISIS=no desactiva solo el análisis jurídico (paso 2) y deja la extracción.
  */
 export function proveedorIADesdeEntorno(env: Entorno = process.env): ProveedorIA | null {
-  const forzado = env["IA_PROVEEDOR"]?.toLowerCase();
-  const geminiOk = Boolean(env["GEMINI_API_KEY"]);
-  const claudeOk = Boolean(env["ANTHROPIC_API_KEY"]);
+  const forzado = env["IA_PROVEEDOR"]?.trim().toLowerCase();
+  const geminiOk = Boolean(env["GEMINI_API_KEY"]?.trim());
+  const claudeOk = Boolean(env["ANTHROPIC_API_KEY"]?.trim());
+  // Solo «ninguno» apaga la IA. Si el proveedor forzado no tiene clave (o el valor no es válido),
+  // se usa el que sí esté configurado, para que un secreto mal escrito no apague la IA en silencio.
   if (forzado === "ninguno") return null;
-  if (forzado === "gemini") return geminiOk ? "gemini" : null;
-  if (forzado === "anthropic") return claudeOk ? "anthropic" : null;
+  if (forzado === "gemini" && geminiOk) return "gemini";
+  if (forzado === "anthropic" && claudeOk) return "anthropic";
+  if (forzado && forzado !== "gemini" && forzado !== "anthropic")
+    console.warn(
+      `[validador] IA_PROVEEDOR="${forzado}" no es válido (gemini, anthropic o ninguno).`,
+    );
   if (geminiOk) return "gemini";
   if (claudeOk) return "anthropic";
   return null;

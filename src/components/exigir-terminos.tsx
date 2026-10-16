@@ -11,6 +11,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ACUERDO_TERMINOS } from "@/lib/acuerdos";
+import { AvisoIA, ResumenIA } from "@/components/autorizacion-ia";
+import { autorizarIA, useAutorizacionIA } from "@/hooks/use-autorizacion-ia";
 import { aceptarAcuerdo, getEstadoTerminos } from "@/lib/historial.functions";
 import { cabecerasDeSesion, motivoDe } from "@/lib/navegador";
 
@@ -20,6 +22,7 @@ type ClerkGlobal = { Clerk?: { signOut: () => Promise<void> } };
  * Pide aceptar los términos y la política de datos (casilla, nunca premarcada) antes de usar las
  * páginas de la cuenta. Cubre también a quien se registra con Google, que no pasa por un formulario
  * propio. El servidor guarda el texto aceptado y la versión; si la versión cambia, se pide de nuevo.
+ * En la misma ventana, aparte y opcional, se puede autorizar la IA una sola vez.
  */
 export function ExigirTerminos({ children }: { children: ReactNode }) {
   const [pendiente, setPendiente] = useState(false);
@@ -48,6 +51,10 @@ export function ExigirTerminos({ children }: { children: ReactNode }) {
 
 function DialogoTerminos({ onAceptado }: { onAceptado: () => void }) {
   const [marcado, setMarcado] = useState(false);
+  // La IA es opcional y va en una casilla aparte (Ley 1581: autorización expresa para datos de salud).
+  const { estado: estadoIA } = useAutorizacionIA();
+  const [usarIA, setUsarIA] = useState(false);
+  const idIA = useId();
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
   const id = useId();
@@ -56,6 +63,7 @@ function DialogoTerminos({ onAceptado }: { onAceptado: () => void }) {
     setError("");
     try {
       await aceptarAcuerdo({ data: { alcance: "terminos" }, headers: await cabecerasDeSesion() });
+      if (usarIA && estadoIA.proveedor) await autorizarIA();
       onAceptado();
     } catch (err) {
       setError(`No pudimos registrar tu aceptación (${motivoDe(err)}). Inténtalo de nuevo.`);
@@ -102,6 +110,25 @@ function DialogoTerminos({ onAceptado }: { onAceptado: () => void }) {
             .
           </span>
         </label>
+        {estadoIA.proveedor && (
+          <div className="terminos-ia">
+            <label className="acuerdo-casilla" htmlFor={idIA}>
+              <input
+                id={idIA}
+                type="checkbox"
+                checked={usarIA}
+                onChange={(e) => setUsarIA(e.target.checked)}
+              />
+              <span>
+                <strong>Opcional:</strong> autorizo el uso de inteligencia artificial con mi tutela.
+              </span>
+            </label>
+            <p className="terminos-ia-detalle">
+              <ResumenIA proveedor={estadoIA.proveedor} />
+            </p>
+            <AvisoIA proveedor={estadoIA.proveedor} respaldo={estadoIA.respaldo} />
+          </div>
+        )}
         {error && (
           <p role="alert" className="revision-web-aviso">
             {error}

@@ -237,6 +237,30 @@ export function revisarOrtografia(texto: string): Correccion[] {
   return out;
 }
 
+/**
+ * Palabras que no parecen español (teclazos o texto sin sentido): sin vocales, con 5 o más
+ * consonantes seguidas o demasiado largas. No tienen corrección automática: se le pide a la persona
+ * revisarlas. Las siglas en mayúscula (EPS, MIPRES) no cuentan.
+ */
+export function palabrasNoReconocidas(texto: string, maximo = 8): string[] {
+  const out = new Set<string>();
+  for (const m of texto.matchAll(new RegExp(`[${LETRA}]{4,}`, "g"))) {
+    const p = m[0];
+    if (/^[A-ZÁÉÍÓÚÑ]+$/.test(p) && p.length <= 8) continue;
+    const n = p.toLowerCase();
+    const vocales = (n.match(/[aeiouáéíóúü]/g) ?? []).length;
+    if (
+      vocales === 0 ||
+      /[^aeiouáéíóúü]{5,}/.test(n) ||
+      n.length > 22 ||
+      (n.length >= 8 && vocales / n.length < 0.2)
+    )
+      out.add(p.length > 30 ? `${p.slice(0, 30)}…` : p);
+    if (out.size >= maximo) break;
+  }
+  return [...out];
+}
+
 /** Aplica una corrección al texto (todas las apariciones si es global; si no, la primera). */
 export function aplicarCorreccion(texto: string, c: Correccion): string {
   if (!c.global) return texto.includes(c.original) ? texto.replace(c.original, c.corregido) : texto;
@@ -271,6 +295,15 @@ const SENALES_SALUD =
 /** Revisión rápida, sin IA, de si el texto parece una tutela de salud. */
 export function revisarTema(texto: string): TemaTutela | null {
   if (texto.trim().length < 150) return null;
+  const palabras = texto.match(new RegExp(`[${LETRA}]{4,}`, "g")) ?? [];
+  const raras = palabrasNoReconocidas(texto, 1000).length;
+  const largoRaro = (texto.match(new RegExp(`[${LETRA}]{23,}`, "g")) ?? []).join("").length;
+  if (palabras.length > 0 && (raras / palabras.length > 0.3 || largoRaro / texto.length > 0.4))
+    return {
+      esTutelaDeSalud: false,
+      observacion:
+        "Gran parte del texto no tiene palabras que podamos entender. Escribe o pega tu tutela: qué servicio de salud necesitas, qué hizo la EPS y qué le pides al juez.",
+    };
   const senales = SENALES_TUTELA.filter((r) => r.test(texto)).length;
   const salud = SENALES_SALUD.test(texto);
   if (!salud)

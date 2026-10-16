@@ -17,6 +17,20 @@ export async function usuarioDeLaSolicitud(): Promise<string> {
   return sesion.userId;
 }
 
+/** Exige que la persona haya autorizado el uso de IA (registro en consentimientos_web, alcance «ia»). */
+export async function exigirAutorizacionIA(usuario: string): Promise<void> {
+  const [{ almacenDesdeEntorno }, { versionVigente }] = await Promise.all([
+    import("@/lib/historial/almacen.server"),
+    import("@/lib/acuerdos"),
+  ]);
+  const autorizada = await (
+    await almacenDesdeEntorno()
+  )
+    .tieneConsentimiento(usuario, "ia", versionVigente("ia"))
+    .catch(() => false);
+  if (!autorizada) throw new Error("Primero autoriza el uso de IA");
+}
+
 /** Límite simple de usos por usuario y por instancia del servidor (protege cuotas de IA). */
 export function crearLimitador(maximo: number, ventanaMs: number) {
   const usos = new Map<string, number[]>();
