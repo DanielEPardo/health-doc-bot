@@ -75,14 +75,14 @@ export const INSTRUCCIONES_REDACCION = `Ayudas a una persona en Colombia a mejor
 Devuelve solo el JSON pedido:
 
 1. "tema": ¿el texto es una acción de tutela por un servicio de salud?
-   - "esTutelaDeSalud": true si lo es (aunque esté incompleta o mal escrita); false si es otro tipo de escrito, otro tema o un texto sin sentido.
-   - "observacion": si es false, explica en una o dos frases qué le falta para ser una tutela de salud. Si es true, cadena vacía.
+   - "esTutelaDeSalud": true si lo es, aunque esté incompleta, desordenada o mal escrita (basta con que alguien le pida a un juez que le protejan su salud frente a una EPS, IPS o entidad similar). false si es cualquier otra cosa: un texto sin sentido o con palabras al azar, una receta, una tarea, una noticia, una carta o queja que no le pide nada a un juez, una tutela sobre otro tema (pensión, educación, trabajo) o un texto de salud que no es una tutela (historia clínica, fórmula, artículo). No supongas que es una tutela solo porque te piden revisarla.
+   - "observacion": si es false, explica en una o dos frases, en lenguaje sencillo, qué es el texto y qué le falta para ser una tutela de salud. Si es true, cadena vacía.
 
 2. "correcciones": cambios concretos sobre el texto, de dos tipos:
-   - "ortografia": tildes, letras, mayúsculas, puntuación o concordancia. "original" de 1 a 15 palabras.
+   - "ortografia": revisa el texto PALABRA POR PALABRA e incluye TODOS los errores: letras de más, de menos, cambiadas o invertidas («cuandow» → «cuando», «medicamneto» → «medicamento», «beces» → «veces»), tildes (también las que dependen del contexto: «el» / «él», «esta» / «está», «solicite» / «solicité»), mayúsculas, puntuación y concordancia. "original" de 1 a 15 palabras. No dejes errores sin marcar aunque sean muchos.
    - "redaccion": frases confusas, muy largas, repetidas o desordenadas que el juez podría no entender. Reescríbelas para que se entiendan mejor, en primera persona y con lenguaje claro, SIN agregar ni quitar hechos. "original" puede ser una oración o un párrafo corto (máximo 70 palabras).
-   - En ambos casos "original" debe copiarse EXACTAMENTE del texto (con sus errores) y "motivo" explica el cambio en pocas palabras.
-   - No cambies nombres propios, números, fechas, citas de normas ni los marcadores entre corchetes. Prioriza los errores que más afectan la comprensión. Máximo ${MAX_CORRECCIONES}.
+   - En ambos casos "original" debe copiarse EXACTAMENTE del texto (con sus errores, mayúsculas y signos) y "motivo" explica el cambio en pocas palabras.
+   - No cambies nombres propios, números, fechas, citas de normas ni los marcadores entre corchetes. Máximo ${MAX_CORRECCIONES}: si hay más, primero los de ortografía.
 
 3. "secciones": texto propuesto SOLO para los puntos pendientes que te indico, escrito en primera persona, con lenguaje claro y respetuoso, listo para copiar en la tutela.
    - Usa únicamente los hechos que aparecen en la tutela. NO INVENTES fechas, nombres, números, diagnósticos ni servicios: cuando falte un dato escribe [completa: qué dato].

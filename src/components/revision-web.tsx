@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import {
   AlertTriangle,
   Check,
@@ -27,6 +27,7 @@ import {
   LONGITUD_MAXIMA,
   LONGITUD_MINIMA,
   listaAnexos,
+  revisarTema,
   validarTexto,
   type AnalisisJuridicoIA,
   type AnexoSugerido,
@@ -51,6 +52,8 @@ import { EstadoAutorizacionIA } from "@/components/autorizacion-ia";
 import { useAutorizacionIA } from "@/hooks/use-autorizacion-ia";
 import { RedaccionSugerida } from "@/components/redaccion-sugerida";
 import { getEstadoRedaccion } from "@/lib/redaccion.functions";
+import { temaDetieneRevision, type TemaTutela } from "@/lib/redaccion-tipos";
+import { useOrtografiaDiccionario } from "@/hooks/use-ortografia-diccionario";
 import { useHistorial } from "@/hooks/use-historial";
 
 /*
@@ -277,10 +280,13 @@ function Resultado({
   res,
   desactualizado,
   anexos,
+  avisoTema,
 }: {
   res: ResultadoPublico;
   desactualizado: boolean;
   anexos: AnexoSugerido[] | null;
+  /** Si el texto no parece una tutela de salud (IA o revisión sin IA), se avisa antes del puntaje. */
+  avisoTema: string | null;
 }) {
   const [copiado, setCopiado] = useState(false);
   const pendientes = res.resultados
@@ -304,6 +310,11 @@ function Resultado({
         <p className="resultado-desactualizado" role="status">
           <Info aria-hidden="true" /> Cambiaste el texto: este resultado corresponde a la versión
           anterior. Vuelve a revisar para actualizarlo.
+        </p>
+      )}
+      {avisoTema && (
+        <p className="resultado-tema" role="status">
+          <AlertTriangle aria-hidden="true" /> {avisoTema}
         </p>
       )}
       <div className="resultado-encabezado">
@@ -401,6 +412,19 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
   const [avisoPDF, setAvisoPDF] = useState("");
   const [continuando, setContinuando] = useState<{ titulo: string; detalle: string } | null>(null);
   const [redaccionIA, setRedaccionIA] = useState({ disponible: false, respaldo: false });
+  // Ortografía con diccionario y «¿es una tutela de salud?», sin IA, mientras se escribe.
+  const diccionario = useOrtografiaDiccionario(texto);
+  const temaLocal = useMemo(() => {
+    const d = diccionario.revision;
+    return revisarTema(texto, {
+      proporcionDesconocidas: d && d.revisadas >= 15 ? d.noReconocidas / d.revisadas : undefined,
+    });
+  }, [texto, diccionario.revision]);
+  // Si el texto claramente no es una tutela de salud, no se le pone puntaje (se puede forzar).
+  const [noEsTutela, setNoEsTutela] = useState<TemaTutela | null>(null);
+  const [temaRevisado, setTemaRevisado] = useState<TemaTutela | null>(null);
+  const [temaIA, setTemaIA] = useState<TemaTutela | null>(null);
+  const [revisionId, setRevisionId] = useState(0);
   const historial = useHistorial();
   const { guardar: guardarEnHistorial, cargar: cargarDelHistorial } = historial;
   const resultadoRef = useRef<HTMLDivElement>(null);
@@ -457,7 +481,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
     return () => clearTimeout(t);
   }, [borrado]);
 
-  const revisar = async () => {
+  const revisar = async (deTodosModos = false) => {
     if (cargando) return;
     const limpio = texto.trim();
     // H9 — mensajes que dicen qué pasó y cómo resolverlo.
@@ -482,6 +506,16 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
     setAviso("");
     setAvisoIA("");
     const textoEnviado = texto;
+    if (!deTodosModos && temaDetieneRevision(temaLocal)) {
+      setNoEsTutela(temaLocal);
+      setRes(null);
+      setTextoRevisado(textoEnviado);
+      requestAnimationFrame(() => resultadoRef.current?.focus());
+      return;
+    }
+    setNoEsTutela(null);
+    setTemaRevisado(temaLocal);
+    setTemaIA(null);
     let resultado: ResultadoPublico;
     if (usarIA && iaDisponible) {
       setCargando(true);
@@ -505,6 +539,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
     setRes(resultado);
     setTextoRevisado(textoEnviado);
     setDeclaradosRevisados(declarados);
+    setRevisionId((n) => n + 1);
     if (historial.activo)
       guardarEnHistorial(textoEnviado, declarados, {
         dictamen: resultado.dictamen,
@@ -521,6 +556,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
     setBorrado({ texto, res, id: historial.id });
     setTexto("");
     setRes(null);
+    setNoEsTutela(null);
     setAviso("");
     setAvisoPDF("");
     setContinuando(null);
@@ -619,8 +655,13 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
           textoRevisado={textoRevisado}
           res={res}
           declarados={declaradosRevisados}
+          diccionario={diccionario.revision}
+          diccionarioCargando={diccionario.cargando}
+          temaLocal={temaLocal}
+          revisionId={revisionId}
           iaDisponible={redaccionIA.disponible && proveedorIA !== null}
           iaAutorizada={usarIA}
+          onTemaIA={setTemaIA}
           onCambiarTexto={(nuevo) => {
             setTexto(nuevo);
             if (aviso) setAviso("");
@@ -682,10 +723,32 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
         )}
       </div>
       <div ref={resultadoRef} tabIndex={-1} aria-live="polite" className="revision-web-resultado">
+        {noEsTutela && (
+          <div className="resultado resultado-no-tutela">
+            <h2>
+              <AlertTriangle aria-hidden="true" /> Esto no parece una tutela de salud
+            </h2>
+            <p>{noEsTutela.observacion}</p>
+            <p className="resultado-nota">
+              Por eso no le ponemos puntaje: las reglas están hechas para acciones de tutela por
+              servicios de salud. Si de verdad es tu tutela, puedes revisarla de todos modos.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => void revisar(true)}>
+              Revisarla de todos modos
+            </Button>
+          </div>
+        )}
         {res && (
           <Resultado
             res={res}
             desactualizado={texto !== textoRevisado || declarados !== declaradosRevisados}
+            avisoTema={
+              temaIA && !temaIA.esTutelaDeSalud
+                ? `La IA indica que tu texto no parece una tutela de salud. ${temaIA.observacion}`.trim()
+                : temaRevisado && !temaRevisado.esTutelaDeSalud
+                  ? temaRevisado.observacion
+                  : null
+            }
             anexos={
               declaradosRevisados
                 ? listaAnexos(declaradosRevisados, extraerHeuristico(textoRevisado))

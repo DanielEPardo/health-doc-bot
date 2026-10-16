@@ -11,6 +11,8 @@ import {
 import { anonimizar } from "@/lib/validador/extraccion/anonimizar";
 import { _limpiarCacheModelos } from "@/lib/validador/extraccion/gemini.server";
 import { normalizarRedaccion, sugerirRedaccionIA } from "@/lib/redaccion-ia.server";
+import { crearCorrector, revisarConDiccionario } from "@/lib/validador/redaccion/corrector";
+import { temaDetieneRevision } from "@/lib/redaccion-tipos";
 import {
   aplicarCorreccion,
   palabrasNoReconocidas,
@@ -208,5 +210,83 @@ describe("Texto sin sentido", () => {
 
   it("si casi todo es texto sin sentido, el tema lo dice", () => {
     expect(revisarTema(basura)?.observacion).toMatch(/no tiene palabras que podamos entender/);
+  });
+});
+
+describe("Ortografía con diccionario (es-CO)", () => {
+  const raiz = path.join(process.cwd(), "public/diccionario");
+  const corrector = crearCorrector(
+    readFileSync(path.join(raiz, "es-co.aff"), "utf8"),
+    readFileSync(path.join(raiz, "es-co.dic"), "utf8"),
+  );
+  const cambios = (t: string) =>
+    revisarConDiccionario(t, corrector).correcciones.map((c) => `${c.original}→${c.corregido}`);
+
+  it("detecta errores de tipeo y propone la palabra correcta", () => {
+    const t =
+      "Señor juez, cuandow fui a la EPS no me dieron el medicamneto. Ya fui tres beces, tengo dolor de cabesa, el tratamineto es urjente y la negaron sin raxon. Nesecitamos ayuda.";
+    expect(cambios(t)).toEqual([
+      "cuandow→cuando",
+      "medicamneto→medicamento",
+      "beces→veces",
+      "cabesa→cabeza",
+      "tratamineto→tratamiento",
+      "urjente→urgente",
+      "raxon→razón",
+      "Nesecitamos→Necesitamos",
+    ]);
+  });
+
+  it("no marca palabras correctas de las tutelas de ejemplo (términos médicos, EPS, nombres)", () => {
+    for (const f of ["tutela-completa.txt", "tutela-agente-oficioso.txt"]) {
+      const r = revisarConDiccionario(leer(f), corrector);
+      expect([...r.correcciones.map((c) => c.original), ...r.desconocidas], f).toEqual([]);
+    }
+    const r = revisarConDiccionario(
+      "Presento tutela contra Colpensiones y Famisanar. 2. Colpensiones no responde. Me ordenaron hemodiálisis, adalimumab y una valoración por el reumatólogo en la IPS.",
+      corrector,
+    );
+    expect([...r.correcciones, ...r.desconocidas]).toEqual([]);
+  });
+
+  it("aplica la corrección en cada aparición con su mayúscula", () => {
+    const t = "Cuandow llegué. Y cuandow volví";
+    const c = revisarConDiccionario(t, corrector).correcciones[0]!;
+    expect(aplicarCorreccion(t, c)).toBe("Cuando llegué. Y cuando volví");
+  });
+
+  it("las palabras sin sentido no tienen corrección y cuentan como no reconocidas", () => {
+    const r = revisarConDiccionario("asdkj qwlek zxmcn hola poiuy lkjhg mnbvc asdfg", corrector);
+    expect(r.correcciones).toEqual([]);
+    expect(r.desconocidas).toContain("asdkj");
+    expect(r.noReconocidas / r.revisadas).toBeGreaterThan(0.5);
+  });
+});
+
+describe("¿Es una tutela de salud? (sin IA)", () => {
+  it("las tutelas de ejemplo, aunque estén mal escritas, sí lo son", () => {
+    for (const f of ["tutela-completa.txt", "tutela-incompleta.txt", "tutela-agente-oficioso.txt"])
+      expect(revisarTema(leer(f))?.esTutelaDeSalud, f).toBe(true);
+  });
+
+  it("un texto de otro tema detiene la revisión, aunque diga «solicito», «derecho» o «cita»", () => {
+    const colegio =
+      "Señor rector, solicito respetuosamente que se revise la nota de mi examen de matemáticas porque considero que tengo derecho a una segunda calificación. El profesor no explicó los temas y la cita que pedí con coordinación nunca me la dieron. Le pido que ordene repetir la evaluación.";
+    const tema = revisarTema(colegio);
+    expect(tema?.tipo).toBe("otro_tema");
+    expect(temaDetieneRevision(tema)).toBe(true);
+  });
+
+  it("una tutela que no es de salud solo avisa", () => {
+    const pension =
+      "Señor Juez Laboral del Circuito de Bogotá. Yo, Pedro Ruiz, presento acción de tutela contra Colpensiones por la vulneración de mis derechos fundamentales al mínimo vital. PRETENSIONES: Solicito ordenar a Colpensiones resolver mi solicitud de pensión en 48 horas.";
+    const tema = revisarTema(pension);
+    expect(tema?.tipo).toBe("otra_tutela");
+    expect(temaDetieneRevision(tema)).toBe(false);
+  });
+
+  it("con muchas palabras fuera del diccionario, el texto se marca como sin sentido", () => {
+    const t = leer("tutela-completa.txt");
+    expect(revisarTema(t, { proporcionDesconocidas: 0.6 })?.tipo).toBe("sin_sentido");
   });
 });

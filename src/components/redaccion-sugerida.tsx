@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -18,7 +18,6 @@ import {
   extraerHeuristico,
   palabrasNoReconocidas,
   revisarOrtografia,
-  revisarTema,
   pendientesPorCompletar,
   seccionesSugeridas,
   type DocumentosDeclarados,
@@ -26,7 +25,8 @@ import {
 } from "@/lib/validador";
 import type { ResultadoPublico } from "@/lib/revision-ia.functions";
 import { sugerirRedaccion, type RedaccionPublica } from "@/lib/redaccion.functions";
-import type { Correccion } from "@/lib/redaccion-tipos";
+import type { Correccion, TemaTutela } from "@/lib/redaccion-tipos";
+import type { RevisionDiccionario } from "@/lib/validador/redaccion/corrector";
 import { cabecerasDeSesion, motivoDe } from "@/lib/navegador";
 
 /** Muestra el texto con los espacios «[completa: …]» resaltados. */
@@ -161,26 +161,41 @@ function ListaCorrecciones({
 
 /**
  * Panel «Redacción sugerida», al lado del texto de la tutela.
- * - Sin IA, mientras la persona escribe: errores de ortografía frecuentes y si el texto parece una
- *   tutela de salud. Después de «Revisar ahora»: plantillas para las partes que faltan.
- * - Con IA (si la persona la autorizó): ortografía según el contexto, frases reescritas para que se
- *   entiendan mejor y redacción propuesta para los puntos pendientes. Todo son propuestas.
+ * - Sin IA, mientras la persona escribe: ortografía con diccionario (palabras mal escritas, tildes,
+ *   mayúsculas) y si el texto parece una tutela de salud. Después de «Revisar ahora»: plantillas
+ *   para las partes que faltan.
+ * - Con IA (si la persona la autorizó, una sola vez): se pide sola después de cada «Revisar ahora».
+ *   Ortografía según el contexto, frases reescritas para que se entiendan mejor y redacción
+ *   propuesta para los puntos pendientes. Todo son propuestas.
  */
 export function RedaccionSugerida({
   texto,
   textoRevisado,
   res,
   declarados,
+  diccionario,
+  diccionarioCargando = false,
+  temaLocal,
+  revisionId,
   iaDisponible,
   iaAutorizada,
+  onTemaIA,
   onCambiarTexto,
 }: {
   texto: string;
   textoRevisado: string;
   res: ResultadoPublico | null;
   declarados: DocumentosDeclarados | null;
+  /** Revisión con diccionario (null mientras carga o si el navegador no la permite). */
+  diccionario: RevisionDiccionario | null;
+  diccionarioCargando?: boolean;
+  /** ¿Parece una tutela de salud? (revisión sin IA, calculada en RevisionWeb) */
+  temaLocal: TemaTutela | null;
+  /** Cambia en cada «Revisar ahora»: si la IA está autorizada, se pide sola. */
+  revisionId: number;
   iaDisponible: boolean;
   iaAutorizada: boolean;
+  onTemaIA?: (tema: TemaTutela | null) => void;
   onCambiarTexto: (nuevo: string) => void;
 }) {
   const [agregadas, setAgregadas] = useState<Set<string>>(new Set());
@@ -188,9 +203,23 @@ export function RedaccionSugerida({
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
 
-  const ortografia = useMemo(() => revisarOrtografia(texto), [texto]);
-  const raras = useMemo(() => palabrasNoReconocidas(texto), [texto]);
-  const temaLocal = useMemo(() => revisarTema(texto), [texto]);
+  const frecuentes = useMemo(() => revisarOrtografia(texto), [texto]);
+  // Errores frecuentes + diccionario (sin repetir palabras). Las del diccionario pueden ser de una
+  // versión anterior del texto: solo se muestran las que siguen en él.
+  const ortografia = useMemo(() => {
+    const ya = new Set(frecuentes.map((c) => c.original.toLowerCase()));
+    const delDiccionario = (diccionario?.correcciones ?? []).filter(
+      (c) => !ya.has(c.original.toLowerCase()) && correccionVigente(texto, c),
+    );
+    return [...frecuentes, ...delDiccionario];
+  }, [frecuentes, diccionario, texto]);
+  const raras = useMemo(() => {
+    const ya = new Set(ortografia.map((c) => c.original.toLowerCase()));
+    const todas = [...palabrasNoReconocidas(texto), ...(diccionario?.desconocidas ?? [])];
+    return [...new Set(todas)]
+      .filter((p) => !ya.has(p.toLowerCase()) && texto.includes(p.replace(/…$/, "")))
+      .slice(0, 10);
+  }, [texto, diccionario, ortografia]);
   const plantillas = useMemo(
     () =>
       res ? seccionesSugeridas(res.resultados, extraerHeuristico(textoRevisado), declarados) : [],
@@ -218,22 +247,33 @@ export function RedaccionSugerida({
     setAgregadas((a) => new Set(a).add(clave));
   };
 
-  const pedirIA = async () => {
+  const pedirIA = async (textoIA: string) => {
     setCargando(true);
     setError("");
     try {
-      setIa(
-        await sugerirRedaccion({
-          data: { texto, autorizaIA: true, pendientes },
-          headers: await cabecerasDeSesion(),
-        }),
-      );
+      const r = await sugerirRedaccion({
+        data: { texto: textoIA, autorizaIA: true, pendientes },
+        headers: await cabecerasDeSesion(),
+      });
+      setIa(r);
+      onTemaIA?.(r.tema);
     } catch (err) {
       setError(`No pudimos revisar la redacción con IA (${motivoDe(err)}).`);
     } finally {
       setCargando(false);
     }
   };
+
+  // Con la IA autorizada, cada «Revisar ahora» también pide la revisión de redacción con IA.
+  const ultimaRevision = useRef(0);
+  useEffect(() => {
+    if (!revisionId || revisionId === ultimaRevision.current) return;
+    ultimaRevision.current = revisionId;
+    if (iaDisponible && iaAutorizada && textoRevisado.trim().length >= 50)
+      void pedirIA(textoRevisado);
+    // pedirIA usa los pendientes de esta misma revisión.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revisionId]);
 
   return (
     <aside className="redaccion-sugerida" aria-labelledby="redaccion-titulo">
@@ -251,11 +291,11 @@ export function RedaccionSugerida({
         </p>
       )}
 
-      {iaDisponible && (
+      {iaDisponible ? (
         <div className="redaccion-ia">
           <Button
             size="sm"
-            onClick={() => void pedirIA()}
+            onClick={() => void pedirIA(texto)}
             disabled={!iaAutorizada || cargando || texto.trim().length < 50}
             aria-busy={cargando}
           >
@@ -264,9 +304,21 @@ export function RedaccionSugerida({
             ) : (
               <Wand2 aria-hidden="true" />
             )}{" "}
-            {cargando ? "Revisando con IA…" : "Mejorar redacción y ortografía con IA"}
+            {cargando
+              ? "Revisando con IA…"
+              : ia
+                ? "Volver a revisar con IA"
+                : "Mejorar redacción y ortografía con IA"}
           </Button>
-          {!iaAutorizada && (
+          {iaAutorizada ? (
+            !ia &&
+            !cargando && (
+              <p className="redaccion-motivo">
+                Al presionar «Revisar ahora», la IA también revisa la ortografía, la redacción y si
+                el texto es una tutela de salud.
+              </p>
+            )
+          ) : (
             <p className="redaccion-motivo">
               Para usarla, autoriza el uso de IA en la tarjeta de abajo (solo se pide una vez). El
               texto se envía sin tu nombre, cédula, teléfono, correo ni dirección.
@@ -278,6 +330,11 @@ export function RedaccionSugerida({
             </p>
           )}
         </div>
+      ) : (
+        <p className="redaccion-motivo">
+          La revisión con IA no está disponible en este momento: te mostramos la revisión automática
+          con diccionario y reglas.
+        </p>
       )}
 
       <div aria-live="polite">
@@ -289,8 +346,8 @@ export function RedaccionSugerida({
             {raras.length > 0 && (
               <div className="redaccion-raras">
                 <p>
-                  <AlertTriangle aria-hidden="true" /> Estas palabras no parecen español. Revisa si
-                  están bien escritas:
+                  <AlertTriangle aria-hidden="true" /> Estas palabras no están en el diccionario.
+                  Revisa si están bien escritas (si son nombres o medicamentos, déjalas así):
                 </p>
                 <ul>
                   {raras.map((p) => (
@@ -301,10 +358,15 @@ export function RedaccionSugerida({
             )}
             {ortografia.length + iaOrtografia.length === 0 ? (
               <p className="redaccion-motivo">
-                <Check aria-hidden="true" /> No encontramos errores frecuentes de tildes o
-                mayúsculas. Las palabras subrayadas en rojo dentro del cuadro las marca tu
-                navegador.
-                {iaDisponible && !ia ? " Para una revisión completa, usa la IA." : ""}
+                {diccionarioCargando ? (
+                  <>
+                    <Loader2 aria-hidden="true" className="animate-spin" /> Revisando la ortografía…
+                  </>
+                ) : (
+                  <>
+                    <Check aria-hidden="true" /> No encontramos palabras mal escritas.
+                  </>
+                )}
               </p>
             ) : (
               <ListaCorrecciones

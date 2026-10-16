@@ -136,7 +136,14 @@ export class AlmacenHistorialSupabase implements AlmacenHistorial {
   }
 
   private static ok<T>(r: { data: T; error: { message: string } | null }, op: string): T {
-    if (r.error) throw new Error(`[historial] Supabase ${op}: ${r.error.message}`);
+    if (r.error) {
+      // La autorización de IA necesita la migración 20261015120000_autorizacion_ia.sql.
+      if (/alcance_check/.test(r.error.message))
+        throw new Error(
+          "La base de datos aún no acepta esta autorización: falta aplicar la migración 20261015120000_autorizacion_ia.sql",
+        );
+      throw new Error(`[historial] Supabase ${op}: ${r.error.message}`);
+    }
     return r.data;
   }
 

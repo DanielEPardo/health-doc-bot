@@ -269,7 +269,7 @@ export function aplicarCorreccion(texto: string, c: Correccion): string {
     const clave = m.toLowerCase();
     const sigla = SIGLAS[clave];
     if (sigla) return sigla;
-    const base = PALABRAS[clave] ?? c.corregido;
+    const base = PALABRAS[clave] ?? c.base ?? c.corregido;
     return /^[A-ZÁÉÍÓÚ]/.test(base) ? base : conMayuscula(m, base);
   });
 }
@@ -282,41 +282,74 @@ export const correccionVigente = (texto: string, c: Correccion) =>
 // ¿Es una tutela de salud?
 // ---------------------------------------------------------------------------
 
+/** Señales de que es una acción de tutela (cada una cuenta una vez). */
 const SENALES_TUTELA = [
-  /tutela/i,
-  /\bjuez\b|juzgado|señor\(?a?\)?\s+juez/i,
-  /solicito|le pido|pido (al|a usted)|ordenar|que se ordene|pretensiones/i,
-  /derecho/i,
-  /\beps\b|entidad promotora|nueva eps|sanitas|sura|compensar|famisanar|salud total|coosalud|mutual ser/i,
+  /acci[oó]n de tutela|\btutela\b|\btutelar\b/i,
+  /\bjuez\b|\bjueza\b|juzgado|\(reparto\)/i,
+  /decreto 2591|art[ií]culo 86|\bart\.? 86\b/i,
+  /derechos? fundamental/i,
+  /pretensiones|solicito (al|a la|a usted|respetuosamente|se ordene)|le (pido|solicito) al (señor )?juez|ordenar a|que se ordene/i,
+  /vulnera|vulneraci[oó]n|amenaza (a |de )?mis derechos/i,
+  /accionante|accionad[ao]|agente oficios/i,
+  /juramento|no he presentado otra/i,
 ];
-const SENALES_SALUD =
-  /salud|m[eé]dic|medicament|cirug|tratamiento|terapia|examen|cita|especialista|hospital|cl[ií]nica|diagn[oó]stic|enfermedad|eps\b|ips\b|f[oó]rmula|mipres|dolor/i;
 
-/** Revisión rápida, sin IA, de si el texto parece una tutela de salud. */
-export function revisarTema(texto: string): TemaTutela | null {
+/** Señales de un servicio de salud: fuertes (cuentan 1) y débiles (cuentan ½). */
+const SALUD_FUERTE =
+  /\bsalud\b|\beps\b|\bips\b|entidad promotora|nueva eps|sanitas|famisanar|coosalud|salud total|compensar eps|medicament|m[eé]dic[oa]s? tratante|cirug[ií]a|tratamiento|diagn[oó]stic|mipres|hospital|cl[ií]nica|especialista|enfermedad|quimioterapia|insulina|f[oó]rmula m[eé]dica|historia cl[ií]nica|urgencias|discapacidad|terapias?\b/gi;
+const SALUD_DEBIL =
+  /\bcita\b|dolor|examen|ex[aá]menes|pastillas|s[ií]ntoma|m[eé]dic[oa]\b|paciente/gi;
+
+const contar = (re: RegExp, t: string) =>
+  new Set((t.match(re) ?? []).map((m) => m.toLowerCase())).size;
+
+/**
+ * Revisión rápida, sin IA, de si el texto parece una tutela de salud.
+ * `proporcionDesconocidas`: parte de las palabras que no están en el diccionario (corrector.ts);
+ * si no se da, se usa la heurística de palabrasNoReconocidas.
+ */
+export function revisarTema(
+  texto: string,
+  opciones: { proporcionDesconocidas?: number | undefined } = {},
+): TemaTutela | null {
   if (texto.trim().length < 150) return null;
   const palabras = texto.match(new RegExp(`[${LETRA}]{4,}`, "g")) ?? [];
   const raras = palabrasNoReconocidas(texto, 1000).length;
   const largoRaro = (texto.match(new RegExp(`[${LETRA}]{23,}`, "g")) ?? []).join("").length;
-  if (palabras.length > 0 && (raras / palabras.length > 0.3 || largoRaro / texto.length > 0.4))
+  const desconocidas = opciones.proporcionDesconocidas ?? 0;
+  if (
+    palabras.length > 0 &&
+    (raras / palabras.length > 0.3 || largoRaro / texto.length > 0.4 || desconocidas > 0.4)
+  )
     return {
       esTutelaDeSalud: false,
+      tipo: "sin_sentido",
       observacion:
         "Gran parte del texto no tiene palabras que podamos entender. Escribe o pega tu tutela: qué servicio de salud necesitas, qué hizo la EPS y qué le pides al juez.",
     };
-  const senales = SENALES_TUTELA.filter((r) => r.test(texto)).length;
-  const salud = SENALES_SALUD.test(texto);
-  if (!salud)
+  const tutela = SENALES_TUTELA.filter((r) => r.test(texto)).length;
+  // Las señales débiles («cita», «examen») solas no bastan: también aparecen en otros temas.
+  const salud = contar(SALUD_FUERTE, texto) + contar(SALUD_DEBIL, texto) / 3;
+  if (salud < 1 && tutela >= 2)
     return {
       esTutelaDeSalud: false,
+      tipo: "otra_tutela",
       observacion:
-        "No encontramos un servicio de salud en tu texto (medicamento, cita, cirugía, EPS…). Este revisor es para tutelas de salud: cuenta qué servicio necesitas y qué hizo la EPS.",
+        "Parece una tutela, pero no sobre un servicio de salud. Este revisor está hecho para tutelas de salud (medicamentos, citas, cirugías, tratamientos con la EPS), así que el resultado puede no aplicar a tu caso.",
     };
-  if (senales < 2)
+  if (salud < 1)
     return {
       esTutelaDeSalud: false,
+      tipo: "otro_tema",
       observacion:
-        "Tu texto habla de salud, pero todavía no parece una acción de tutela: falta dirigirla al juez, decir qué derecho se vulnera y qué le pides. Usa las partes sugeridas abajo.",
+        "Este texto no parece una tutela de salud: no habla de un servicio de salud (medicamento, cita, cirugía, EPS…) ni le pide algo a un juez. Escribe o pega tu tutela para poder revisarla.",
+    };
+  if (tutela === 0)
+    return {
+      esTutelaDeSalud: false,
+      tipo: "no_es_tutela",
+      observacion:
+        "Tu texto habla de salud, pero todavía no parece una acción de tutela: falta dirigirla al juez, decir qué derecho se vulnera y qué le pides. Usa las partes sugeridas en «Redacción sugerida».",
     };
   return { esTutelaDeSalud: true, observacion: "" };
 }
