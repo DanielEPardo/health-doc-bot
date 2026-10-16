@@ -121,6 +121,18 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // Tras una actualización, los archivos viejos de la página ya no existen: recargar una vez.
+  useEffect(() => {
+    const recargar = (e: Event) => {
+      e.preventDefault();
+      if (sessionStorage.getItem('recarga-modulo')) return;
+      sessionStorage.setItem('recarga-modulo', '1');
+      window.location.reload();
+    };
+    window.addEventListener('vite:preloadError', recargar);
+    const t = setTimeout(() => sessionStorage.removeItem('recarga-modulo'), 10_000);
+    return () => { window.removeEventListener('vite:preloadError', recargar); clearTimeout(t); };
+  }, []);
   const { publishableKey } = Route.useLoaderData();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const showHeaderCTA = !['/revision', '/sign-in', '/sign-up', '/perfil'].includes(pathname);
