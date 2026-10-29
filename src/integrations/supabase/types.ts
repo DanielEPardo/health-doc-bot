@@ -71,6 +71,7 @@ export type Database = {
           buffer: string
           documentos: Json | null
           estado: string
+          modalidad: string | null
           telefono: string
         }
         Insert: {
@@ -78,6 +79,7 @@ export type Database = {
           buffer?: string
           documentos?: Json | null
           estado: string
+          modalidad?: string | null
           telefono: string
         }
         Update: {
@@ -85,6 +87,7 @@ export type Database = {
           buffer?: string
           documentos?: Json | null
           estado?: string
+          modalidad?: string | null
           telefono?: string
         }
         Relationships: []
@@ -125,6 +128,30 @@ export type Database = {
         }
         Relationships: []
       }
+      metricas_revisiones: {
+        Row: {
+          actualizado_en: string
+          cantidad: number
+          canal: string
+          fecha: string
+          modalidad: string
+        }
+        Insert: {
+          actualizado_en?: string
+          cantidad?: number
+          canal: string
+          fecha?: string
+          modalidad: string
+        }
+        Update: {
+          actualizado_en?: string
+          cantidad?: number
+          canal?: string
+          fecha?: string
+          modalidad?: string
+        }
+        Relationships: []
+      }
       tutelas: {
         Row: {
           actualizado: string
@@ -157,7 +184,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      incrementar_metrica_revision: {
+        Args: {
+          p_canal: string
+          p_modalidad: string
+          p_fecha?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

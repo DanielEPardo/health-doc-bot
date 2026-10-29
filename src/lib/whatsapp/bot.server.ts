@@ -97,6 +97,8 @@ export interface Conversacion {
   buffer: string;
   /** Respuestas sobre documentos (no los documentos): se usan en la revisión (reglas D##). */
   documentos?: DocumentosDeclarados | null;
+  /** Formato de la tutela recibida; no contiene el archivo ni su texto. */
+  modalidad?: "texto" | "pdf" | null;
   actualizado: Date;
 }
 
@@ -106,6 +108,7 @@ export interface Almacen {
   registrarConsentimiento(telefono: string, textoAutorizacion: string): Promise<void>;
   /** Guarda solo el resumen: sin texto ni hallazgos (que contienen nombre, cédula, diagnóstico). */
   guardarRevision(telefono: string, resumen: ResumenRevision): Promise<void>;
+  registrarMetricaRevision(canal: "web" | "whatsapp", modalidad: "texto" | "pdf"): Promise<void>;
   /** Supresión total de los datos del titular (Ley 1581, art. 8 lit. e). */
   borrarTodo(telefono: string): Promise<void>;
   /** Idempotencia: Meta reintenta webhooks; devuelve false si el id ya fue procesado. */
@@ -139,6 +142,7 @@ export class AlmacenMemoria implements Almacen {
   private ids = new Set<string>();
   readonly consentimientos: { telefono: string; texto: string; fecha: Date }[] = [];
   readonly revisiones: { telefono: string; resumen: ResumenRevision }[] = [];
+  readonly metricas: { canal: "web" | "whatsapp"; modalidad: "texto" | "pdf" }[] = [];
   async obtener(t: string) {
     return this.conv.get(t) ?? null;
   }
@@ -150,6 +154,9 @@ export class AlmacenMemoria implements Almacen {
   }
   async guardarRevision(telefono: string, resumen: ResumenRevision) {
     this.revisiones.push({ telefono, resumen });
+  }
+  async registrarMetricaRevision(canal: "web" | "whatsapp", modalidad: "texto" | "pdf") {
+    this.metricas.push({ canal, modalidad });
   }
   async borrarTodo(t: string) {
     this.conv.delete(t);
@@ -278,7 +285,8 @@ export async function procesarMensaje(
     estado: EstadoConversacion,
     buffer = conv.buffer,
     documentos = conv.documentos ?? null,
-  ) => a.guardar({ telefono, estado, buffer, documentos, actualizado: new Date() });
+    modalidad = conv.modalidad ?? null,
+  ) => a.guardar({ telefono, estado, buffer, documentos, modalidad, actualizado: new Date() });
 
   if (c === "BORRAR") {
     await a.borrarTodo(telefono);
@@ -344,7 +352,7 @@ export async function procesarMensaje(
           if (pdf.escaneado) return [TEXTOS.pdfEscaneado];
           const buffer = conv.buffer ? `${conv.buffer}\n${pdf.texto}` : pdf.texto;
           if (buffer.length > LONGITUD_MAXIMA) return [TEXTOS.muyLargo];
-          await guardar("recibiendo", buffer);
+          await guardar("recibiendo", buffer, conv.documentos ?? null, "pdf");
           return [TEXTOS.pdfLeido(pdf.paginas, buffer.length)];
         } catch (err) {
           console.warn("[bot] PDF ilegible", (err as Error).message);
@@ -360,7 +368,11 @@ export async function procesarMensaje(
             declarados: conv.documentos ?? null,
           });
           await a.guardarRevision(telefono, resumirRevision(res));
-          await guardar("revisado", ""); // el texto se descarta aquí
+          // La métrica no contiene texto, teléfono ni resultado de la tutela.
+          if (a.registrarMetricaRevision) {
+            await a.registrarMetricaRevision("whatsapp", conv.modalidad ?? "texto");
+          }
+          await guardar("revisado", "", null, null); // el texto se descarta aquí
           return [...formatearWhatsApp(res), TEXTOS.final];
         } catch (err) {
           console.error("[bot] error validando", err);
@@ -369,7 +381,7 @@ export async function procesarMensaje(
       }
       const buffer = conv.buffer ? `${conv.buffer}\n${texto}` : texto;
       if (buffer.length > LONGITUD_MAXIMA) return [TEXTOS.muyLargo];
-      await guardar("recibiendo", buffer);
+      await guardar("recibiendo", buffer, conv.documentos ?? null, conv.modalidad ?? "texto");
       return [TEXTOS.recibido(buffer.length)];
     }
 

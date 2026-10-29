@@ -84,6 +84,12 @@ function Politica() {
                 de visita, como las páginas vistas y el tiempo en ellas, para medir el
                 funcionamiento del sitio; esos datos no incluyen el contenido de tu tutela.
               </li>
+              <li>
+                <strong>Métricas agregadas de uso:</strong> conservamos la cantidad de revisiones
+                realizadas por canal (página o WhatsApp) y modalidad (texto o PDF). Estas métricas
+                no contienen el texto de la tutela, los archivos, datos de salud ni identificadores
+                personales.
+              </li>
             </ul>
           ),
         },

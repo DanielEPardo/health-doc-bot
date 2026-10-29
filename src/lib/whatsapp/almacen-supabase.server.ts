@@ -25,7 +25,7 @@ export class AlmacenSupabase implements Almacen {
   async obtener(telefono: string): Promise<Conversacion | null> {
     const { data, error } = await this.db
       .from("conversaciones")
-      .select("telefono, estado, buffer, documentos, actualizado")
+      .select("telefono, estado, buffer, documentos, modalidad, actualizado")
       .eq("telefono", telefono)
       .maybeSingle();
     AlmacenSupabase.revisar(error, "obtener");
@@ -35,6 +35,7 @@ export class AlmacenSupabase implements Almacen {
       estado: EstadoConversacion;
       buffer: string;
       documentos: DocumentosDeclarados | null;
+      modalidad: "texto" | "pdf" | null;
       actualizado: string;
     };
     return { ...fila, actualizado: new Date(fila.actualizado) };
@@ -47,6 +48,7 @@ export class AlmacenSupabase implements Almacen {
         estado: c.estado,
         buffer: c.buffer,
         documentos: c.documentos ?? null,
+        modalidad: c.modalidad ?? null,
         actualizado: new Date().toISOString(),
       },
       { onConflict: "telefono" },
@@ -64,6 +66,17 @@ export class AlmacenSupabase implements Almacen {
   async guardarRevision(telefono: string, resumen: ResumenRevision): Promise<void> {
     const { error } = await this.db.from("revisiones").insert({ telefono, resumen });
     AlmacenSupabase.revisar(error, "revision");
+  }
+
+  async registrarMetricaRevision(
+    canal: "web" | "whatsapp",
+    modalidad: "texto" | "pdf",
+  ): Promise<void> {
+    const { error } = await this.db.rpc("incrementar_metrica_revision", {
+      p_canal: canal,
+      p_modalidad: modalidad,
+    });
+    AlmacenSupabase.revisar(error, "métrica");
   }
 
   async borrarTodo(telefono: string): Promise<void> {

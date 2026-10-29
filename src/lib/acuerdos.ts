@@ -44,12 +44,13 @@ export function textoAcuerdo(titulo: string, puntos: readonly string[]): string 
  */
 export const ACUERDO_TERMINOS = {
   alcance: "terminos",
-  version: "2026-10-15",
+  version: "2026-10-29",
   titulo: "Términos y política de datos",
   puntos: [
     "TuTelaGanas hace una revisión orientativa y automatizada de tutelas de salud: no es asesoría jurídica ni garantiza el resultado.",
     "Usaremos los datos de tu cuenta para identificarte y prestarte el servicio, según la política de tratamiento de datos.",
     "Los datos de salud de tu tutela solo se envían o se guardan con tu autorización aparte, en cada opción que lo requiera.",
+    "Conservaremos métricas agregadas de uso, como la cantidad de revisiones por canal y formato, sin el contenido ni los datos personales de tu tutela.",
     "Puedes eliminar tu cuenta y tus datos cuando quieras desde «Mi perfil».",
   ],
 } as const;

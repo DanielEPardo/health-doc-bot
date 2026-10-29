@@ -56,6 +56,7 @@ import { temaDetieneRevision, type TemaTutela } from "@/lib/redaccion-tipos";
 import { useOrtografiaDiccionario } from "@/hooks/use-ortografia-diccionario";
 import { useHistorial } from "@/hooks/use-historial";
 import { buscarAparicion, mostrarEnTextarea } from "@/lib/ir-al-texto";
+import { registrarRevisionWeb } from "@/lib/metricas.functions";
 
 /*
  * Revisión en la web. Diseño guiado por las 10 heurísticas de Nielsen
@@ -391,6 +392,7 @@ function Resultado({
  */
 export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}) {
   const [texto, setTexto] = useState("");
+  const [modalidad, setModalidad] = useState<"texto" | "pdf">("texto");
   const [res, setRes] = useState<ResultadoPublico | null>(null);
   const [textoRevisado, setTextoRevisado] = useState("");
   const [aviso, setAviso] = useState("");
@@ -559,6 +561,15 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
     } else {
       resultado = validarTexto(limpio, { declarados });
     }
+    try {
+      await registrarRevisionWeb({
+        data: { modalidad },
+        headers: await cabecerasDeSesion(),
+      });
+    } catch (err) {
+      console.error("[metricas] No se pudo registrar la revisión web", err);
+      setAviso("La revisión terminó, pero no pudimos registrar la métrica de uso.");
+    }
     setRes(resultado);
     setTextoRevisado(textoEnviado);
     setDeclaradosRevisados(declarados);
@@ -578,6 +589,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
   const borrar = () => {
     setBorrado({ texto, res, id: historial.id });
     setTexto("");
+    setModalidad("texto");
     setRes(null);
     setNoEsTutela(null);
     setAviso("");
@@ -631,6 +643,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
         onTexto={(t, mensaje) => {
           if (texto.trim() && texto !== t) setBorrado({ texto, res, id: historial.id });
           setTexto(t);
+          setModalidad("pdf");
           setAvisoPDF(mensaje);
           setAviso("");
         }}
