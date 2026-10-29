@@ -357,6 +357,7 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
 .acuerdo-casilla { display:flex; gap:10px; align-items:flex-start; font-weight:600; cursor:pointer; }
 .acuerdo-casilla input { width:20px; height:20px; margin-top:3px; accent-color:var(--primary); flex-shrink:0; }
 .acuerdo-acciones { display:flex; flex-wrap:wrap; gap:10px; }
+.terminos-contenido { min-height:0; max-height:calc(100vh - 250px); overflow-y:auto; padding-right:8px; overscroll-behavior:contain; }
 .historial-guardar { margin-top:18px; padding:14px 18px; border:1px solid var(--border); border-radius:8px; display:grid; gap:10px; justify-items:start; }
 .historial-guardar > p { display:flex; gap:8px; align-items:flex-start; }
 .historial-guardar > p svg { width:20px; height:20px; flex-shrink:0; margin-top:3px; color:var(--primary); }

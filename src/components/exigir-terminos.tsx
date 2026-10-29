@@ -86,54 +86,56 @@ function DialogoTerminos({ onAceptado }: { onAceptado: () => void }) {
             Para usar tu cuenta necesitamos que aceptes los términos y la política de datos.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <ul className="acuerdo-puntos">
-          {ACUERDO_TERMINOS.puntos.map((p) => (
-            <li key={p}>{p}</li>
-          ))}
-        </ul>
-        <label className="acuerdo-casilla" htmlFor={id}>
-          <input
-            id={id}
-            type="checkbox"
-            checked={marcado}
-            onChange={(e) => setMarcado(e.target.checked)}
-          />
-          <span>
-            Leí y acepto los{" "}
-            <Link to="/terminos" target="_blank" className="text-link">
-              Términos y condiciones
-            </Link>{" "}
-            y la{" "}
-            <Link to="/politica-de-datos" target="_blank" className="text-link">
-              Política de tratamiento de datos
-            </Link>
-            .
-          </span>
-        </label>
-        {estadoIA.proveedor && (
-          <div className="terminos-ia">
-            <label className="acuerdo-casilla" htmlFor={idIA}>
-              <input
-                id={idIA}
-                type="checkbox"
-                checked={usarIA}
-                onChange={(e) => setUsarIA(e.target.checked)}
-              />
-              <span>
-                <strong>Opcional:</strong> autorizo el uso de inteligencia artificial con mi tutela.
-              </span>
-            </label>
-            <p className="terminos-ia-detalle">
-              <ResumenIA proveedor={estadoIA.proveedor} />
+        <div className="terminos-contenido">
+          <ul className="acuerdo-puntos">
+            {ACUERDO_TERMINOS.puntos.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+          <label className="acuerdo-casilla" htmlFor={id}>
+            <input
+              id={id}
+              type="checkbox"
+              checked={marcado}
+              onChange={(e) => setMarcado(e.target.checked)}
+            />
+            <span>
+              Leí y acepto los{" "}
+              <Link to="/terminos" target="_blank" className="text-link">
+                Términos y condiciones
+              </Link>{" "}
+              y la{" "}
+              <Link to="/politica-de-datos" target="_blank" className="text-link">
+                Política de tratamiento de datos
+              </Link>
+              .
+            </span>
+          </label>
+          {estadoIA.proveedor && (
+            <div className="terminos-ia">
+              <label className="acuerdo-casilla" htmlFor={idIA}>
+                <input
+                  id={idIA}
+                  type="checkbox"
+                  checked={usarIA}
+                  onChange={(e) => setUsarIA(e.target.checked)}
+                />
+                <span>
+                  <strong>Opcional:</strong> autorizo el uso de inteligencia artificial con mi tutela.
+                </span>
+              </label>
+              <p className="terminos-ia-detalle">
+                <ResumenIA proveedor={estadoIA.proveedor} />
+              </p>
+              <AvisoIA proveedor={estadoIA.proveedor} />
+            </div>
+          )}
+          {error && (
+            <p role="alert" className="revision-web-aviso">
+              {error}
             </p>
-            <AvisoIA proveedor={estadoIA.proveedor} />
-          </div>
-        )}
-        {error && (
-          <p role="alert" className="revision-web-aviso">
-            {error}
-          </p>
-        )}
+          )}
+        </div>
         <AlertDialogFooter>
           <Button variant="ghost" onClick={() => void salir()}>
             No acepto, cerrar sesión
