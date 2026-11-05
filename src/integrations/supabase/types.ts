@@ -107,6 +107,30 @@ export type Database = {
         }
         Relationships: []
       }
+      metricas_revisiones: {
+        Row: {
+          actualizado_en: string
+          canal: string
+          cantidad: number
+          fecha: string
+          modalidad: string
+        }
+        Insert: {
+          actualizado_en?: string
+          canal: string
+          cantidad?: number
+          fecha?: string
+          modalidad: string
+        }
+        Update: {
+          actualizado_en?: string
+          canal?: string
+          cantidad?: number
+          fecha?: string
+          modalidad?: string
+        }
+        Relationships: []
+      }
       revisiones: {
         Row: {
           creado_en: string
@@ -125,30 +149,6 @@ export type Database = {
           id?: never
           resumen?: Json
           telefono?: string
-        }
-        Relationships: []
-      }
-      metricas_revisiones: {
-        Row: {
-          actualizado_en: string
-          cantidad: number
-          canal: string
-          fecha: string
-          modalidad: string
-        }
-        Insert: {
-          actualizado_en?: string
-          cantidad?: number
-          canal: string
-          fecha?: string
-          modalidad: string
-        }
-        Update: {
-          actualizado_en?: string
-          cantidad?: number
-          canal?: string
-          fecha?: string
-          modalidad?: string
         }
         Relationships: []
       }
@@ -185,11 +185,7 @@ export type Database = {
     }
     Functions: {
       incrementar_metrica_revision: {
-        Args: {
-          p_canal: string
-          p_modalidad: string
-          p_fecha?: string
-        }
+        Args: { p_canal: string; p_fecha?: string; p_modalidad: string }
         Returns: undefined
       }
     }
