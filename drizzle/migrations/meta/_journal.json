@@ -15,6 +15,13 @@
       "when": 1792118308708,
       "tag": "0001_autorizacion_ia",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793883339391,
+      "tag": "0002_growth_loop_referidos",
+      "breakpoints": true
     }
   ]
 }
