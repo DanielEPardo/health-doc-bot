@@ -92,6 +92,41 @@ export type Database = {
         }
         Relationships: []
       }
+      cuentas: {
+        Row: {
+          codigo: string
+          creado_en: string
+          creditos: number
+          invitado_por: string | null
+          primera_revision_en: string | null
+          user_id: string
+        }
+        Insert: {
+          codigo: string
+          creado_en?: string
+          creditos?: number
+          invitado_por?: string | null
+          primera_revision_en?: string | null
+          user_id: string
+        }
+        Update: {
+          codigo?: string
+          creado_en?: string
+          creditos?: number
+          invitado_por?: string | null
+          primera_revision_en?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cuentas_invitado_por_fkey"
+            columns: ["invitado_por"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       mensajes_procesados: {
         Row: {
           id_mensaje: string
@@ -152,6 +187,32 @@ export type Database = {
         }
         Relationships: []
       }
+      revisiones_ia: {
+        Row: {
+          creado_en: string
+          id: number
+          user_id: string
+        }
+        Insert: {
+          creado_en?: string
+          id?: never
+          user_id: string
+        }
+        Update: {
+          creado_en?: string
+          id?: never
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revisiones_ia_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       tutelas: {
         Row: {
           actualizado: string
@@ -184,8 +245,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acreditar_primera_revision: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
+      consumir_credito: { Args: { p_user_id: string }; Returns: boolean }
       incrementar_metrica_revision: {
         Args: { p_canal: string; p_fecha?: string; p_modalidad: string }
+        Returns: undefined
+      }
+      metricas_loop: {
+        Args: { p_dias?: number }
+        Returns: {
+          invitaciones_enviadas: number
+          referidos_activados: number
+          usuarios_activos: number
+        }[]
+      }
+      sumar_creditos: {
+        Args: { p_cantidad: number; p_user_id: string }
         Returns: undefined
       }
     }
