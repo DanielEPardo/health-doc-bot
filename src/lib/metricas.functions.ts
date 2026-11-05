@@ -9,8 +9,9 @@ export const registrarRevisionWeb = createServerFn({ method: "POST" })
     return { modalidad: data.modalidad };
   })
   .handler(async ({ data }) => {
-    const { usuarioDeLaSolicitud } = await import("@/lib/sesion.server");
-    await usuarioDeLaSolicitud();
+    const { usuarioDeLaSolicitud, esAdministrador } = await import("@/lib/sesion.server");
+    const usuario = await usuarioDeLaSolicitud();
+    if (esAdministrador(usuario)) return { ok: true };
     const { registrarRevision } = await import("@/lib/metricas-revisiones.server");
     const canal: CanalRevision = "web";
     await registrarRevision(canal, data.modalidad);

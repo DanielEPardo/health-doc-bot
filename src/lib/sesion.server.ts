@@ -17,6 +17,15 @@ export async function usuarioDeLaSolicitud(): Promise<string> {
   return sesion.userId;
 }
 
+/** Identifica administradores configurados exclusivamente en el entorno del servidor. */
+export function esAdministrador(usuario: string): boolean {
+  const administradores = (process.env["ADMIN_CLERK_USER_IDS"] ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  return administradores.includes(usuario);
+}
+
 /** Exige que la persona haya autorizado el uso de IA (registro en consentimientos_web, alcance «ia»). */
 export async function exigirAutorizacionIA(usuario: string): Promise<void> {
   const [{ almacenDesdeEntorno }, { versionVigente }] = await Promise.all([

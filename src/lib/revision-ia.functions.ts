@@ -39,7 +39,7 @@ export const revisarConIA = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data }): Promise<ResultadoPublico> => {
-    const { usuarioDeLaSolicitud, crearLimitador, exigirAutorizacionIA } =
+    const { usuarioDeLaSolicitud, crearLimitador, exigirAutorizacionIA, esAdministrador } =
       await import("@/lib/sesion.server");
     const { proveedorIADesdeEntorno, validarTutela } =
       await import("@/lib/validador/servidor.server");
@@ -48,9 +48,10 @@ export const revisarConIA = createServerFn({ method: "POST" })
     const usuario = await usuarioDeLaSolicitud().catch((e: Error) => {
       throw new Error(`${e.message.replace(/\.$/, "")} para usar el análisis con IA.`);
     });
+    const administrador = esAdministrador(usuario);
     await exigirAutorizacionIA(usuario);
     dentroDelLimite ??= crearLimitador(5, 60_000);
-    if (!dentroDelLimite(usuario))
+    if (!administrador && !dentroDelLimite(usuario))
       throw new Error("Hiciste muchas revisiones seguidas. Espera un minuto e inténtalo de nuevo.");
 
     const proveedor = proveedorIADesdeEntorno();
@@ -61,8 +62,10 @@ export const revisarConIA = createServerFn({ method: "POST" })
     const { obtenerOCrearCuenta, cobrarRevision, cerrarRevision, devolverCobro } =
       await import("@/lib/referidos/servicio.server");
     const { SIN_CREDITOS } = await import("@/lib/referidos/tipos");
-    await obtenerOCrearCuenta(usuario, data.codigo);
-    if (!(await cobrarRevision(usuario))) throw new Error(SIN_CREDITOS);
+    if (!administrador) {
+      await obtenerOCrearCuenta(usuario, data.codigo);
+      if (!(await cobrarRevision(usuario))) throw new Error(SIN_CREDITOS);
+    }
 
     try {
       // El texto no se guarda: se anonimiza, se analiza y se descarta.
@@ -72,13 +75,13 @@ export const revisarConIA = createServerFn({ method: "POST" })
       });
       // Si la IA no llegó a aportar (cayó a heurística), no se cobra la revisión.
       if (!publico.origenExtraccion.includes("ia")) {
-        await devolverCobro(usuario);
+        if (!administrador) await devolverCobro(usuario);
         return publico;
       }
-      await cerrarRevision(usuario);
+      if (!administrador) await cerrarRevision(usuario);
       return publico;
     } catch (error) {
-      await devolverCobro(usuario).catch(() => undefined);
+      if (!administrador) await devolverCobro(usuario).catch(() => undefined);
       throw error;
     }
   });
