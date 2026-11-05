@@ -533,3 +533,14 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
  .revision-web-acciones .review-button { max-width:none; }
 }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+
+/* Growth loop: saldo de revisiones con IA y panel "comparte y gana revisiones". */
+.revision-web-saldo { font-size:15px; font-weight:600; color:var(--muted-foreground); margin:0 0 12px; }
+.revision-web-referidos { margin-top:16px; padding:16px 18px; border:1px solid var(--border); border-radius:8px; background:var(--secondary); }
+.revision-web-referidos[data-sin-saldo] { border-color:var(--primary); background:color-mix(in oklch, var(--primary) 8%, transparent); }
+.revision-web-referidos h3 { display:flex; align-items:center; gap:10px; font-size:18px; font-weight:700; margin:0 0 8px; }
+.revision-web-referidos h3 svg { width:20px; height:20px; flex-shrink:0; color:var(--primary); }
+.revision-web-referidos p { font-size:16px; color:var(--muted-foreground); line-height:1.5; margin:0; }
+.revision-web-referidos-acciones { display:flex; flex-wrap:wrap; gap:10px; margin:14px 0 12px; }
+.revision-web-referidos-estado { font-size:15px; font-weight:600; }
+.revision-web-referidos-nota { font-size:14px; margin-top:6px !important; }

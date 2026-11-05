@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MetricasRouteImport } from './routes/metricas'
 import { Route as MisTutelasRouteImport } from './routes/mis-tutelas'
 import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PoliticaDeDatosRouteImport } from './routes/politica-de-datos'
@@ -19,12 +20,18 @@ import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as ApiClerkWebhookRouteImport } from './routes/api/clerk-webhook'
 import { Route as ApiWhatsappRouteImport } from './routes/api/whatsapp'
+import { Route as RCodigoRouteImport } from './routes/r.$codigo'
 import { Route as ApiPublicTwilioWhatsappRouteImport } from './routes/api/public/twilio/whatsapp'
 import { Route as ApiPublicWhatsappEvolutionRouteImport } from './routes/api/public/whatsapp/evolution'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MetricasRoute = MetricasRouteImport.update({
+  id: '/metricas',
+  path: '/metricas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MisTutelasRoute = MisTutelasRouteImport.update({
@@ -72,6 +79,11 @@ const ApiWhatsappRoute = ApiWhatsappRouteImport.update({
   path: '/api/whatsapp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RCodigoRoute = RCodigoRouteImport.update({
+  id: '/r/$codigo',
+  path: '/r/$codigo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTwilioWhatsappRoute = ApiPublicTwilioWhatsappRouteImport.update({
   id: '/api/public/twilio/whatsapp',
   path: '/api/public/twilio/whatsapp',
@@ -86,6 +98,7 @@ const ApiPublicWhatsappEvolutionRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/metricas': typeof MetricasRoute
   '/mis-tutelas': typeof MisTutelasRoute
   '/perfil': typeof PerfilRoute
   '/politica-de-datos': typeof PoliticaDeDatosRoute
@@ -95,11 +108,13 @@ export interface FileRoutesByFullPath {
   '/terminos': typeof TerminosRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
+  '/r/$codigo': typeof RCodigoRoute
   '/api/public/twilio/whatsapp': typeof ApiPublicTwilioWhatsappRoute
   '/api/public/whatsapp/evolution': typeof ApiPublicWhatsappEvolutionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/metricas': typeof MetricasRoute
   '/mis-tutelas': typeof MisTutelasRoute
   '/perfil': typeof PerfilRoute
   '/politica-de-datos': typeof PoliticaDeDatosRoute
@@ -109,12 +124,14 @@ export interface FileRoutesByTo {
   '/terminos': typeof TerminosRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
+  '/r/$codigo': typeof RCodigoRoute
   '/api/public/twilio/whatsapp': typeof ApiPublicTwilioWhatsappRoute
   '/api/public/whatsapp/evolution': typeof ApiPublicWhatsappEvolutionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/metricas': typeof MetricasRoute
   '/mis-tutelas': typeof MisTutelasRoute
   '/perfil': typeof PerfilRoute
   '/politica-de-datos': typeof PoliticaDeDatosRoute
@@ -124,6 +141,7 @@ export interface FileRoutesById {
   '/terminos': typeof TerminosRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
+  '/r/$codigo': typeof RCodigoRoute
   '/api/public/twilio/whatsapp': typeof ApiPublicTwilioWhatsappRoute
   '/api/public/whatsapp/evolution': typeof ApiPublicWhatsappEvolutionRoute
 }
@@ -131,6 +149,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/metricas'
     | '/mis-tutelas'
     | '/perfil'
     | '/politica-de-datos'
@@ -140,11 +159,13 @@ export interface FileRouteTypes {
     | '/terminos'
     | '/api/clerk-webhook'
     | '/api/whatsapp'
+    | '/r/$codigo'
     | '/api/public/twilio/whatsapp'
     | '/api/public/whatsapp/evolution'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/metricas'
     | '/mis-tutelas'
     | '/perfil'
     | '/politica-de-datos'
@@ -154,11 +175,13 @@ export interface FileRouteTypes {
     | '/terminos'
     | '/api/clerk-webhook'
     | '/api/whatsapp'
+    | '/r/$codigo'
     | '/api/public/twilio/whatsapp'
     | '/api/public/whatsapp/evolution'
   id:
     | '__root__'
     | '/'
+    | '/metricas'
     | '/mis-tutelas'
     | '/perfil'
     | '/politica-de-datos'
@@ -168,12 +191,14 @@ export interface FileRouteTypes {
     | '/terminos'
     | '/api/clerk-webhook'
     | '/api/whatsapp'
+    | '/r/$codigo'
     | '/api/public/twilio/whatsapp'
     | '/api/public/whatsapp/evolution'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  MetricasRoute: typeof MetricasRoute
   MisTutelasRoute: typeof MisTutelasRoute
   PerfilRoute: typeof PerfilRoute
   PoliticaDeDatosRoute: typeof PoliticaDeDatosRoute
@@ -183,6 +208,7 @@ export interface RootRouteChildren {
   TerminosRoute: typeof TerminosRoute
   ApiClerkWebhookRoute: typeof ApiClerkWebhookRoute
   ApiWhatsappRoute: typeof ApiWhatsappRoute
+  RCodigoRoute: typeof RCodigoRoute
   ApiPublicTwilioWhatsappRoute: typeof ApiPublicTwilioWhatsappRoute
   ApiPublicWhatsappEvolutionRoute: typeof ApiPublicWhatsappEvolutionRoute
 }
@@ -194,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/metricas': {
+      id: '/metricas'
+      path: '/metricas'
+      fullPath: '/metricas'
+      preLoaderRoute: typeof MetricasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mis-tutelas': {
@@ -259,6 +292,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWhatsappRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/r/$codigo': {
+      id: '/r/$codigo'
+      path: '/r/$codigo'
+      fullPath: '/r/$codigo'
+      preLoaderRoute: typeof RCodigoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/twilio/whatsapp': {
       id: '/api/public/twilio/whatsapp'
       path: '/api/public/twilio/whatsapp'
@@ -278,6 +318,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  MetricasRoute: MetricasRoute,
   MisTutelasRoute: MisTutelasRoute,
   PerfilRoute: PerfilRoute,
   PoliticaDeDatosRoute: PoliticaDeDatosRoute,
@@ -287,6 +328,7 @@ const rootRouteChildren: RootRouteChildren = {
   TerminosRoute: TerminosRoute,
   ApiClerkWebhookRoute: ApiClerkWebhookRoute,
   ApiWhatsappRoute: ApiWhatsappRoute,
+  RCodigoRoute: RCodigoRoute,
   ApiPublicTwilioWhatsappRoute: ApiPublicTwilioWhatsappRoute,
   ApiPublicWhatsappEvolutionRoute: ApiPublicWhatsappEvolutionRoute,
 }

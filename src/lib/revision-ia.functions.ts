@@ -19,13 +19,23 @@ let dentroDelLimite: ((usuario: string) => boolean) | undefined;
 
 export const revisarConIA = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { texto: string; autorizaIA: boolean; declarados?: DocumentosDeclarados | null }) => {
+    (data: {
+      texto: string;
+      autorizaIA: boolean;
+      declarados?: DocumentosDeclarados | null;
+      codigo?: string | null;
+    }) => {
       if (typeof data?.texto !== "string" || data.texto.trim().length < 300)
         throw new Error("El texto es muy corto para ser una tutela.");
       if (data.texto.length > 60_000) throw new Error("El texto es demasiado largo.");
       if (data.autorizaIA !== true)
         throw new Error("Falta tu autorización para el análisis con IA.");
-      return { texto: data.texto, autorizaIA: true as const, declarados: data.declarados ?? null };
+      return {
+        texto: data.texto,
+        autorizaIA: true as const,
+        declarados: data.declarados ?? null,
+        codigo: data.codigo ?? null,
+      };
     },
   )
   .handler(async ({ data }): Promise<ResultadoPublico> => {
@@ -45,10 +55,30 @@ export const revisarConIA = createServerFn({ method: "POST" })
 
     const proveedor = proveedorIADesdeEntorno();
     if (!proveedor) throw new Error("El análisis con IA no está disponible en este momento.");
-    // El texto no se guarda: se anonimiza, se analiza y se descarta.
-    const { extraccion: _noSeDevuelve, ...publico } = await validarTutela(data.texto, {
-      ia: proveedor,
-      declarados: normalizarDeclarados(data.declarados),
-    });
-    return publico;
+
+    // Growth loop: la revisión con IA se paga con el saldo de la cuenta. Sin saldo, la UI muestra
+    // el muro "comparte y gana revisiones" (ver docs/growth-loop.md).
+    const { obtenerOCrearCuenta, cobrarRevision, cerrarRevision, devolverCobro } =
+      await import("@/lib/referidos/servicio.server");
+    const { SIN_CREDITOS } = await import("@/lib/referidos/tipos");
+    await obtenerOCrearCuenta(usuario, data.codigo);
+    if (!(await cobrarRevision(usuario))) throw new Error(SIN_CREDITOS);
+
+    try {
+      // El texto no se guarda: se anonimiza, se analiza y se descarta.
+      const { extraccion: _noSeDevuelve, ...publico } = await validarTutela(data.texto, {
+        ia: proveedor,
+        declarados: normalizarDeclarados(data.declarados),
+      });
+      // Si la IA no llegó a aportar (cayó a heurística), no se cobra la revisión.
+      if (!publico.origenExtraccion.includes("ia")) {
+        await devolverCobro(usuario);
+        return publico;
+      }
+      await cerrarRevision(usuario);
+      return publico;
+    } catch (error) {
+      await devolverCobro(usuario).catch(() => undefined);
+      throw error;
+    }
   });

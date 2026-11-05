@@ -39,6 +39,9 @@ import {
 } from "@/lib/validador";
 import { NOTA_OBSERVACIONES_IA } from "@/lib/validador/aviso-ia";
 import { revisarConIA, type ResultadoPublico } from "@/lib/revision-ia.functions";
+import { getEstadoCuenta } from "@/lib/referidos.functions";
+import { CLAVE_REF, SIN_CREDITOS, type EstadoCuenta } from "@/lib/referidos/tipos";
+import { CompartirReferido, SaldoRevisiones } from "@/components/compartir-referido";
 import { getEstadoDocumentos } from "@/lib/documentos.functions";
 import { cabecerasDeSesion, motivoDe } from "@/lib/navegador";
 import {
@@ -390,6 +393,34 @@ function Resultado({
  * lectura de documentos (acuerdo aparte) o guardado en su historial (cifrado).
  * `tutelaId` abre una tutela del historial para continuarla.
  */
+/** Código de invitación que guardó /r/<codigo> en este navegador, si lo hay. */
+function codigoGuardado(): string | null {
+  try {
+    return window.localStorage.getItem(CLAVE_REF);
+  } catch {
+    return null;
+  }
+}
+
+/** Estado de la cuenta del growth loop (saldo + enlace). null si no hay sesión o falla el servidor. */
+async function cargarCuenta(): Promise<EstadoCuenta | null> {
+  try {
+    const estado = await getEstadoCuenta({
+      data: { codigo: codigoGuardado() },
+      headers: await cabecerasDeSesion(),
+    });
+    // La atribución ya quedó registrada en el servidor: el código no hace falta más.
+    try {
+      window.localStorage.removeItem(CLAVE_REF);
+    } catch {
+      /* navegador sin almacenamiento */
+    }
+    return estado;
+  } catch {
+    return null;
+  }
+}
+
 export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}) {
   const [texto, setTexto] = useState("");
   const [modalidad, setModalidad] = useState<"texto" | "pdf">("texto");
@@ -408,6 +439,24 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
   const usarIA = estadoIA.autorizada;
   const [cargando, setCargando] = useState(false);
   const [avisoIA, setAvisoIA] = useState("");
+  // Growth loop: saldo de revisiones con IA y enlace de invitación de esta cuenta.
+  const [cuenta, setCuenta] = useState<EstadoCuenta | null>(null);
+  const [sinSaldo, setSinSaldo] = useState(false);
+
+  // Saldo y enlace de invitación. La primera llamada crea la cuenta y registra quién invitó.
+  useEffect(() => {
+    if (!iaDisponible) return;
+    let activo = true;
+    void (async () => {
+      const estado = await cargarCuenta();
+      if (!activo || !estado) return;
+      setCuenta(estado);
+      setSinSaldo(estado.creditos <= 0);
+    })();
+    return () => {
+      activo = false;
+    };
+  }, [iaDisponible]);
   const [declarados, setDeclarados] = useState<DocumentosDeclarados | null>(null);
   const [declaradosRevisados, setDeclaradosRevisados] = useState<DocumentosDeclarados | null>(null);
   const [proveedorDocumentos, setProveedorDocumentos] = useState<ProveedorDocumentos | null>(null);
@@ -546,15 +595,30 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
       setCargando(true);
       try {
         resultado = await revisarConIA({
-          data: { texto: limpio, autorizaIA: true, declarados },
+          data: { texto: limpio, autorizaIA: true, declarados, codigo: codigoGuardado() },
           headers: await cabecerasDeSesion(),
         });
+        const estado = await cargarCuenta();
+        if (estado) {
+          setCuenta(estado);
+          setSinSaldo(estado.creditos <= 0);
+        }
       } catch (err) {
         // H9 — si la IA falla, el usuario igual recibe su revisión y sabe por qué cambió.
         resultado = validarTexto(limpio, { declarados });
-        setAvisoIA(
-          `No pudimos usar la IA (${motivoDe(err)}). Te mostramos la revisión hecha en tu navegador.`,
-        );
+        if (err instanceof Error && err.message.includes(SIN_CREDITOS)) {
+          // Growth loop: aquí la persona se topa con el muro y puede compartir para ganar más.
+          setSinSaldo(true);
+          setAvisoIA(
+            "Se te acabaron las revisiones con IA. Abajo puedes ganar más compartiendo tu enlace. Mientras tanto, esta es la revisión hecha en tu navegador.",
+          );
+          const estado = await cargarCuenta();
+          if (estado) setCuenta(estado);
+        } else {
+          setAvisoIA(
+            `No pudimos usar la IA (${motivoDe(err)}). Te mostramos la revisión hecha en tu navegador.`,
+          );
+        }
       } finally {
         setCargando(false);
       }
@@ -714,6 +778,13 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
         onAcuerdoDocumentos={() => setAcuerdoDocumentos(true)}
       />
       <EstadoAutorizacionIA estado={estadoIA} onAutorizar={autorizarIA} />
+      {/* Growth loop: saldo y "comparte y gana revisiones" (docs/growth-loop.md). */}
+      {iaDisponible && cuenta && (
+        <div className="revision-web-ia">
+          <SaldoRevisiones creditos={cuenta.creditos} />
+          <CompartirReferido estado={cuenta} sinSaldo={sinSaldo} />
+        </div>
+      )}
       {cargando && (
         <p className="revision-web-cargando" role="status">
           <Loader2 aria-hidden="true" className="animate-spin" /> Analizando con IA… Si el modelo
