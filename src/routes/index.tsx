@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { Check, ClipboardCheck, FileCheck2, MessageCircle, ShieldCheck, Smartphone, X } from 'lucide-react';
+import { Check, ClipboardCheck, FileCheck2, Gavel, MessageCircle, ShieldCheck, Smartphone, X } from 'lucide-react';
 import { ReviewCTA } from '@/components/review-cta';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import hero from '@/assets/tutela-hero.jpg';
@@ -50,6 +50,21 @@ function Index() {
     <section className="section review-section"><div className="content-width review-layout">
       <div><ClipboardCheck className="review-heading-icon" strokeWidth={1.3} aria-hidden="true" /><h2>Qué revisamos</h2><p className="intro">Los puntos clave para presentar una tutela más clara y completa.</p></div>
       <div><ul className="check-list">{checks.map(text => <li key={text}><Check aria-hidden="true" /><span>{text}</span></li>)}</ul><p className="legal-note">La revisión se basa en el Decreto 2591 de 1991 y en jurisprudencia de la Corte Constitucional.</p></div>
+    </div></section>
+    <section className="validacion-section" aria-labelledby="validacion-titulo"><div className="content-width validacion">
+      <div className="validacion-texto">
+        <p className="validacion-etiqueta"><Gavel aria-hidden="true" /> Probado por abogados</p>
+        <h2 id="validacion-titulo">Abogados de verdad pusieron a prueba la plataforma</h2>
+        <p>Revisaron las recomendaciones que TuTelaGanas le da a cada tutela y dijeron si estaban de acuerdo con ellas.</p>
+        <ul className="validacion-puntos">{['Recomendaciones basadas en el Decreto 2591 de 1991', 'Cada punto cita su fundamento en la ley o en la Corte Constitucional'].map(text => <li key={text}><Check aria-hidden="true" /><span>{text}</span></li>)}</ul>
+      </div>
+      <div className="validacion-tarjeta">
+        <div className="validacion-anillo" role="img" aria-label="85 por ciento">
+          <svg viewBox="0 0 120 120" aria-hidden="true"><circle className="validacion-anillo-fondo" cx="60" cy="60" r="52" /><circle className="validacion-anillo-valor" cx="60" cy="60" r="52" pathLength="100" strokeDasharray="85 100" /></svg>
+          <span aria-hidden="true">85<small>%</small></span>
+        </div>
+        <p>de las recomendaciones de la plataforma fueron <strong>aprobadas por los abogados</strong> que la probaron.</p>
+      </div>
     </div></section>
     <section className="section"><div className="content-width"><div className="narrow">
       <p className="section-kicker">Con transparencia</p><h2>Qué debes saber antes de usarlo</h2>

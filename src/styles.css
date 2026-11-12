@@ -200,6 +200,30 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
 .check-list li { display:flex; gap:16px; align-items:flex-start; }
 .check-list svg { flex-shrink:0; color:var(--primary); margin-top:5px; width:22px; height:22px; }
 .legal-note { border-top:1px solid var(--border); margin-top:30px; padding-top:21px; font-size:18px; color:var(--muted-foreground); }
+/* Landing: validación con abogados (franja suave; el 85 % en un anillo discreto). */
+.validacion-section { padding-block:72px; border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg, color-mix(in oklch, var(--primary) 5%, var(--background)), var(--background)); }
+.validacion { display:grid; gap:32px; align-items:center; max-width:940px; margin-inline:auto; }
+@media (min-width:860px) { .validacion { grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:56px; } }
+.validacion-etiqueta { display:inline-flex; align-items:center; gap:8px; color:var(--primary); font-size:18px; font-weight:600; margin-bottom:12px; }
+.validacion-etiqueta svg { width:20px; height:20px; }
+.validacion h2 { font-size:34px; line-height:1.2; margin-bottom:14px; }
+.validacion-texto > p { font-size:18px; color:var(--muted-foreground); max-width:560px; }
+.validacion-puntos { display:grid; gap:10px; margin-top:22px; }
+.validacion-puntos li { display:flex; gap:12px; align-items:flex-start; font-size:17px; }
+.validacion-puntos svg { flex-shrink:0; width:20px; height:20px; color:var(--primary); margin-top:3px; }
+.validacion-tarjeta { display:flex; align-items:center; gap:20px; padding:22px 24px; border:1px solid var(--border); border-radius:12px; background:var(--card); }
+.validacion-tarjeta p { font-size:17px; color:var(--muted-foreground); }
+.validacion-tarjeta strong { color:var(--foreground); font-weight:600; }
+.validacion-anillo { position:relative; flex-shrink:0; width:104px; height:104px; }
+.validacion-anillo svg { width:100%; height:100%; transform:rotate(-90deg); }
+.validacion-anillo circle { fill:none; stroke-width:7; }
+.validacion-anillo-fondo { stroke:var(--secondary); }
+.validacion-anillo-valor { stroke:color-mix(in oklch, var(--primary) 75%, var(--background)); stroke-linecap:round; animation:validacion-llenar 1.2s ease-out both; }
+@keyframes validacion-llenar { from { stroke-dasharray:0 100; } }
+.validacion-anillo span { position:absolute; inset:0; display:grid; grid-auto-flow:column; place-content:center; font-size:30px; font-weight:700; line-height:1; color:var(--foreground); }
+.validacion-anillo small { font-size:16px; margin-left:1px; align-self:start; margin-top:3px; }
+@media (max-width:640px) { .validacion-section { padding-block:56px; } .validacion h2 { font-size:27px; } }
 .transparency-list { display:flex; flex-direction:column; gap:22px; margin-top:32px; }
 .transparency-list li { display:flex; gap:15px; }
 .transparency-list svg { color:var(--muted-foreground); flex-shrink:0; margin-top:5px; }
