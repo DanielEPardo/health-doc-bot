@@ -6,6 +6,49 @@ import { RevisionWeb } from "@/components/revision-web";
 import { crearPDF } from "./pdf-ayuda";
 
 describe("Revisión en la web", () => {
+  it("revisar lleva a la página del resultado y se puede volver al texto", () => {
+    render(<RevisionWeb />);
+    const caja = screen.getByLabelText("Texto de tu tutela") as HTMLTextAreaElement;
+    fireEvent.change(caja, {
+      target: {
+        value: readFileSync(
+          path.join(process.cwd(), "src/test/fixtures/tutela-incompleta.txt"),
+          "utf8",
+        ),
+      },
+    });
+    expect(screen.getByRole("heading", { level: 1, name: /Tu tutela/ })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    // El texto queda en su página (oculta) y el resultado en otra.
+    expect(caja).not.toBeVisible();
+    expect(screen.getByRole("heading", { level: 1, name: /Resultado/ })).toBeVisible();
+    const pasos = screen.getByRole("navigation", { name: "Pasos de la revisión" });
+    expect(within(pasos).getByRole("button", { name: /Resultado/ })).toHaveAttribute(
+      "aria-current",
+      "step",
+    );
+    fireEvent.click(within(pasos).getByRole("button", { name: /Tu tutela/ }));
+    expect(caja).toBeVisible();
+    expect(caja.value).toContain("Señor");
+    expect(screen.getByRole("button", { name: /Ver el último resultado/ })).toBeInTheDocument();
+  });
+
+  it("si el texto no es una tutela, avisa en la página del texto sin ir al resultado", () => {
+    render(<RevisionWeb />);
+    const caja = screen.getByLabelText("Texto de tu tutela");
+    fireEvent.change(caja, {
+      target: {
+        value:
+          "Señor rector, solicito respetuosamente que se revise la nota de mi examen de matemáticas porque considero que tengo derecho a una segunda calificación. El profesor no explicó los temas y la cita que pedí con coordinación nunca me la dieron. Le pido que ordene repetir la evaluación. También pido que me entreguen las notas del semestre pasado.",
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    expect(screen.getByRole("heading", { name: /no parece una tutela de salud/ })).toBeVisible();
+    expect(caja).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /Revisarla de todos modos/ }));
+    expect(screen.getByRole("heading", { level: 1, name: /Resultado/ })).toBeVisible();
+  });
+
   it("pide un texto mínimo antes de revisar", () => {
     render(<RevisionWeb />);
     fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
@@ -60,17 +103,23 @@ describe("Revisión en la web — documentos y PDF", () => {
 
   it("con las respuestas sobre documentos agrega las reglas D## y la lista de anexos", () => {
     render(<RevisionWeb />);
-    fireEvent.click(screen.getByText(/Cuéntanos sobre tus documentos/));
+    fireEvent.change(screen.getByLabelText("Texto de tu tutela"), {
+      target: { value: leer("tutela-completa.txt") },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    // Página del resultado → página (opcional) de los documentos.
+    fireEvent.click(
+      screen.getByRole("button", { name: /Responder preguntas sobre mis documentos/ }),
+    );
+    expect(screen.getByRole("heading", { level: 1, name: "Tus documentos" })).toBeVisible();
     const orden = screen.getByRole("group", { name: /orden o fórmula del médico/ });
     fireEvent.click(within(orden).getByLabelText("Sí"));
     fireEvent.change(screen.getByLabelText(/¿Qué te ordenó\?/), {
       target: { value: "resonancia de columna" },
     });
     fireEvent.click(screen.getByLabelText(/Me lo negó de palabra/));
-    fireEvent.change(screen.getByLabelText("Texto de tu tutela"), {
-      target: { value: leer("tutela-completa.txt") },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Actualizar la revisión/ }));
+    expect(screen.getByRole("heading", { level: 1, name: /Resultado/ })).toBeInTheDocument();
     expect(screen.getByText("¿Pides lo mismo que ordenó el médico?")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Documentos para adjuntar/ })).toBeInTheDocument();
     expect(screen.getByText(/Negación por escrito o radicado/)).toBeInTheDocument();
@@ -105,13 +154,6 @@ describe("Revisión en la web — documentos y PDF", () => {
 describe("Cuestionario de documentos — respuestas", () => {
   it("las preguntas sin responder no vienen marcadas y elegir «No sé» sí cuenta como respuesta", () => {
     render(<RevisionWeb />);
-    fireEvent.click(screen.getByText(/Cuéntanos sobre tus documentos/));
-    const orden = screen.getByRole("group", { name: /orden o fórmula del médico/ });
-    for (const opcion of within(orden).getAllByRole("radio")) expect(opcion).not.toBeChecked();
-    fireEvent.click(within(orden).getByLabelText("No sé"));
-    expect(within(orden).getByLabelText("No sé")).toBeChecked();
-    const eps = screen.getByRole("group", { name: /Qué hizo la EPS/ });
-    for (const opcion of within(eps).getAllByRole("radio")) expect(opcion).not.toBeChecked();
     fireEvent.change(screen.getByLabelText("Texto de tu tutela"), {
       target: {
         value: readFileSync(
@@ -121,6 +163,16 @@ describe("Cuestionario de documentos — respuestas", () => {
       },
     });
     fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Responder preguntas sobre mis documentos/ }),
+    );
+    const orden = screen.getByRole("group", { name: /orden o fórmula del médico/ });
+    for (const opcion of within(orden).getAllByRole("radio")) expect(opcion).not.toBeChecked();
+    fireEvent.click(within(orden).getByLabelText("No sé"));
+    expect(within(orden).getByLabelText("No sé")).toBeChecked();
+    const eps = screen.getByRole("group", { name: /Qué hizo la EPS/ });
+    for (const opcion of within(eps).getAllByRole("radio")) expect(opcion).not.toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: /Actualizar la revisión/ }));
     expect(screen.getByText("Tu orden médica")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Documentos para adjuntar/ })).toBeInTheDocument();
   });
@@ -140,6 +192,8 @@ describe("Redacción sugerida (panel al lado del texto)", () => {
       },
     });
     fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    // Del resultado se vuelve a la página del texto, donde están las partes propuestas.
+    fireEvent.click(screen.getByRole("button", { name: /Corregir mi texto/ }));
     const panel = screen.getByRole("complementary", { name: "Redacción sugerida" });
     const tarjeta = within(panel).getByText("Juramento").closest("li")!;
     fireEvent.click(within(tarjeta).getByRole("button", { name: /Agregar al final/ }));

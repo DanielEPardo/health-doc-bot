@@ -1,0 +1,18 @@
+{
+  "cuentas": {
+    "user_3Kl1fNc4cf7aX9jDAhxJ1hSCfly": {
+      "userId": "user_3Kl1fNc4cf7aX9jDAhxJ1hSCfly",
+      "codigo": "XMM3R55",
+      "creditos": 0,
+      "invitadoPor": null,
+      "primeraRevisionEn": "2026-11-12T13:46:32.825Z",
+      "creadoEn": "2026-11-12T13:37:41.917Z"
+    }
+  },
+  "revisiones": [
+    {
+      "userId": "user_3Kl1fNc4cf7aX9jDAhxJ1hSCfly",
+      "creadoEn": "2026-11-12T13:46:32.824Z"
+    }
+  ]
+}

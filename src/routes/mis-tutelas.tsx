@@ -83,7 +83,7 @@ function Tarjeta({
       </div>
       <div className="tutela-tarjeta-acciones">
         <Button asChild size="sm" variant={t.estado === "borrador" ? "default" : "outline"}>
-          <Link to="/revision" search={{ tutela: t.id }}>
+          <Link to="/revision/tutela" search={{ tutela: t.id }}>
             <FolderOpen aria-hidden="true" /> {t.estado === "borrador" ? "Continuar" : "Abrir"}
           </Link>
         </Button>
@@ -178,7 +178,7 @@ function MisTutelas() {
         <h1>Mis tutelas</h1>
         <p>Continúa las que dejaste a medias o vuelve a ver las que ya revisaste.</p>
         <Button asChild variant="review">
-          <Link to="/revision">
+          <Link to="/revision/tutela">
             <FilePlus2 aria-hidden="true" /> Revisar una tutela nueva
           </Link>
         </Button>

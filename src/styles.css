@@ -236,8 +236,38 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
 .policy h1 { font-size:38px; margin-bottom:24px; }
 .policy h2 { font-size:25px; margin-top:32px; margin-bottom:15px; }
 .policy p { margin-bottom:18px; }
-.revision-web { width:100%; max-width:760px; margin-top:56px; padding-top:44px; border-top:1px solid var(--border); text-align:left; }
-.revision-web-icono { width:48px; height:48px; color:var(--primary); margin-bottom:16px; }
+.revision-web { width:100%; max-width:760px; margin:0 auto; text-align:left; }
+.revision-web-contenedor { width:100%; }
+.revision-web-icono { width:40px; height:40px; color:var(--primary); flex-shrink:0; }
+.revision-web > section > h1 { display:flex; align-items:center; gap:12px; font-size:32px; margin-bottom:10px; }
+.revision-web > section > h1:focus { outline:none; }
+.revision-pagina { padding-top:28px; }
+/* Páginas de la revisión: dónde está la persona (1 Tu tutela · 2 Resultado · 3 Documentos). */
+.revision-pasos { margin-bottom:28px; }
+.revision-pasos ol { display:flex; flex-wrap:wrap; gap:8px 6px; }
+.revision-pasos li { display:flex; align-items:center; gap:6px; }
+.revision-pasos li + li::before { content:""; width:22px; height:2px; background:var(--border); }
+.revision-paso { display:inline-flex; align-items:center; gap:8px; padding:6px 12px 6px 6px; border-radius:999px; font-size:16px; font-weight:600; color:var(--muted-foreground); cursor:pointer; }
+.revision-paso:hover:not(:disabled) { background:var(--secondary); }
+.revision-paso:disabled { cursor:default; opacity:.6; }
+.revision-paso:focus-visible { outline:2px solid var(--ring); outline-offset:2px; }
+.revision-paso-numero { display:inline-grid; place-items:center; width:28px; height:28px; border-radius:50%; border:2px solid currentColor; font-size:14px; }
+.revision-paso[aria-current="step"] { color:var(--primary); }
+.revision-paso[aria-current="step"] .revision-paso-numero { background:var(--primary); border-color:var(--primary); color:var(--primary-foreground); }
+/* Inicio de /revision: dos formas de enviar la tutela. */
+.revision-opciones { display:grid; gap:18px; width:100%; max-width:860px; margin:8px 0 24px; text-align:left; }
+@media (min-width:760px) { .revision-opciones { grid-template-columns:1fr 1fr; } }
+.revision-opcion { display:flex; flex-direction:column; gap:12px; align-items:flex-start; padding:22px 24px; border:1px solid var(--border); border-radius:8px; background:var(--card); }
+.revision-opcion > svg { width:32px; height:32px; color:var(--primary); }
+.revision-opcion h2 { font-size:24px; }
+.revision-opcion p { color:var(--muted-foreground); flex-grow:1; }
+/* Página del resultado: qué hacer después. */
+.revision-siguientes { margin-top:36px; padding-top:28px; border-top:1px solid var(--border); }
+.revision-siguientes > ul { display:grid; gap:16px; margin:14px 0 8px; }
+.revision-siguiente { display:flex; gap:14px; padding:18px 20px; border:1px solid var(--border); border-radius:8px; }
+.revision-siguiente > svg { width:26px; height:26px; flex-shrink:0; color:var(--primary); margin-top:2px; }
+.revision-siguiente h3 { font-size:19px; font-weight:700; margin-bottom:6px; }
+.revision-siguiente p { color:var(--muted-foreground); margin-bottom:12px; }
 .revision-web h2 { font-size:28px; margin-bottom:10px; }
 .revision-web-intro { color:var(--muted-foreground); margin-bottom:20px; }
 .revision-web-texto { min-height:260px; font-size:17px; line-height:1.55; background:var(--background); }
@@ -529,6 +559,7 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
   .auth-page { padding-inline:20px; }
  .policy h1 { font-size:31px; }
  .revision-web h2 { font-size:24px; }
+ .revision-web > section > h1 { font-size:27px; }
  .revision-web-texto { min-height:220px; }
  .revision-web-acciones .review-button { max-width:none; }
 }

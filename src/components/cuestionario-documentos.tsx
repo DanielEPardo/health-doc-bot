@@ -229,12 +229,15 @@ export function CuestionarioDocumentos({
   proveedorDocumentos,
   acuerdoDocumentos,
   onAcuerdoDocumentos,
+  abierto = false,
 }: {
   valor: DocumentosDeclarados | null;
   onCambio: (d: DocumentosDeclarados | null) => void;
   proveedorDocumentos: ProveedorDocumentos | null;
   acuerdoDocumentos: boolean;
   onAcuerdoDocumentos: () => void;
+  /** Abierto desde el inicio (en su propia página del revisor). */
+  abierto?: boolean;
 }) {
   const id = useId();
   const d = valor ?? DECLARADOS_VACIOS;
@@ -259,7 +262,7 @@ export function CuestionarioDocumentos({
   );
 
   return (
-    <details className="cuestionario" open={valor !== null}>
+    <details className="cuestionario" open={abierto || valor !== null}>
       <summary>
         <Paperclip aria-hidden="true" /> Cuéntanos sobre tus documentos{" "}
         <span className="cuestionario-etiqueta">recomendado</span>

@@ -1,6 +1,15 @@
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
   Check,
   CheckCircle2,
   ClipboardCopy,
@@ -8,6 +17,8 @@ import {
   HelpCircle,
   Info,
   Loader2,
+  Paperclip,
+  PenLine,
   RotateCcw,
   Scale,
   Sparkles,
@@ -393,6 +404,48 @@ function Resultado({
  * lectura de documentos (acuerdo aparte) o guardado en su historial (cifrado).
  * `tutelaId` abre una tutela del historial para continuarla.
  */
+/** Páginas del revisor web: /revision/tutela → /revision/resultado → /revision/documentos. */
+export type PasoRevision = "tutela" | "resultado" | "documentos";
+const PASOS: { paso: PasoRevision; titulo: string }[] = [
+  { paso: "tutela", titulo: "Tu tutela" },
+  { paso: "resultado", titulo: "Resultado" },
+  { paso: "documentos", titulo: "Documentos (opcional)" },
+];
+
+/** H1 — Dónde está la persona dentro de la revisión (y volver a una página ya vista). */
+function PasosRevision({
+  actual,
+  hayResultado,
+  onIr,
+}: {
+  actual: PasoRevision;
+  hayResultado: boolean;
+  onIr: (p: PasoRevision) => void;
+}) {
+  return (
+    <nav aria-label="Pasos de la revisión" className="revision-pasos">
+      <ol>
+        {PASOS.map((p, i) => (
+          <li key={p.paso}>
+            <button
+              type="button"
+              className="revision-paso"
+              aria-current={actual === p.paso ? "step" : undefined}
+              disabled={p.paso !== "tutela" && !hayResultado}
+              onClick={() => onIr(p.paso)}
+            >
+              <span className="revision-paso-numero" aria-hidden="true">
+                {i + 1}
+              </span>
+              {p.titulo}
+            </button>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
 /** Código de invitación que guardó /r/<codigo> en este navegador, si lo hay. */
 function codigoGuardado(): string | null {
   try {
@@ -421,7 +474,24 @@ async function cargarCuenta(): Promise<EstadoCuenta | null> {
   }
 }
 
-export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}) {
+export function RevisionWeb({
+  tutelaId,
+  paso: pasoControlado,
+  onPaso,
+}: {
+  tutelaId?: string | undefined;
+  /** Página actual del revisor. Sin esta prop, el componente maneja sus pasos solo (pruebas). */
+  paso?: PasoRevision | undefined;
+  /** Cambia de página (en /revision, navega a /revision/<paso>). */
+  onPaso?: ((paso: PasoRevision, opciones?: { reemplazar?: boolean }) => void) | undefined;
+} = {}) {
+  const [pasoInterno, setPasoInterno] = useState<PasoRevision>("tutela");
+  const paso = pasoControlado ?? pasoInterno;
+  const irA = useCallback(
+    (p: PasoRevision, opciones?: { reemplazar?: boolean }) =>
+      onPaso ? onPaso(p, opciones) : setPasoInterno(p),
+    [onPaso],
+  );
   const [texto, setTexto] = useState("");
   const [modalidad, setModalidad] = useState<"texto" | "pdf">("texto");
   const [res, setRes] = useState<ResultadoPublico | null>(null);
@@ -477,9 +547,14 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
   const [temaRevisado, setTemaRevisado] = useState<TemaTutela | null>(null);
   const [temaIA, setTemaIA] = useState<TemaTutela | null>(null);
   const [revisionId, setRevisionId] = useState(0);
+  // Texto que la persona pidió revisar aunque no parezca una tutela de salud.
+  const [textoForzado, setTextoForzado] = useState<string | null>(null);
+  const [avisoMetrica, setAvisoMetrica] = useState("");
   const historial = useHistorial();
   const { guardar: guardarEnHistorial, cargar: cargarDelHistorial } = historial;
-  const resultadoRef = useRef<HTMLDivElement>(null);
+  const raizRef = useRef<HTMLDivElement>(null);
+  const noEsTutelaRef = useRef<HTMLDivElement>(null);
+  const titulos = useRef<Partial<Record<PasoRevision, HTMLHeadingElement | null>>>({});
   const textoRef = useRef<HTMLTextAreaElement>(null);
 
   // «Redacción sugerida» → lleva al lugar del texto donde está la sugerencia (con su contexto).
@@ -555,38 +630,54 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
     return () => clearTimeout(t);
   }, [borrado]);
 
+  // Al cambiar de página: se lleva la vista arriba y el foco al título (lectores de pantalla).
+  const pasoAnterior = useRef(paso);
+  useEffect(() => {
+    if (pasoAnterior.current === paso) return;
+    pasoAnterior.current = paso;
+    raizRef.current?.scrollIntoView?.({ block: "start" });
+    titulos.current[paso]?.focus({ preventScroll: true });
+  }, [paso]);
+
+  // El resultado y los documentos necesitan una revisión hecha (p. ej., si se recarga la página).
+  useEffect(() => {
+    if (paso !== "tutela" && !res && !cargando) irA("tutela", { reemplazar: true });
+  }, [paso, res, cargando, irA]);
+
+  /** H9 — si el texto no sirve para revisar, dice qué pasó y cómo resolverlo. */
+  const problemaDelTexto = (limpio: string): string => {
+    if (limpio.length === 0)
+      return "Aún no has pegado tu tutela. Copia el texto completo (desde «Señor Juez» hasta tu firma) y pégalo arriba.";
+    if (limpio.length < LONGITUD_MINIMA)
+      return `Tu texto tiene ${limpio.length} caracteres y una tutela suele tener más de ${LONGITUD_MINIMA}. Revisa que hayas pegado el escrito completo.`;
+    if (limpio.length > LONGITUD_MAXIMA)
+      return "El texto es demasiado largo. Pega solo el escrito de la tutela, sin anexos ni historia clínica.";
+    return "";
+  };
+
+  /** Revisa la tutela y lleva a la página del resultado. */
   const revisar = async (deTodosModos = false) => {
     if (cargando) return;
     const limpio = texto.trim();
-    // H9 — mensajes que dicen qué pasó y cómo resolverlo.
-    if (limpio.length === 0) {
-      setAviso(
-        "Aún no has pegado tu tutela. Copia el texto completo (desde «Señor Juez» hasta tu firma) y pégalo arriba.",
-      );
-      return;
-    }
-    if (limpio.length < LONGITUD_MINIMA) {
-      setAviso(
-        `Tu texto tiene ${limpio.length} caracteres y una tutela suele tener más de ${LONGITUD_MINIMA}. Revisa que hayas pegado el escrito completo.`,
-      );
-      return;
-    }
-    if (limpio.length > LONGITUD_MAXIMA) {
-      setAviso(
-        "El texto es demasiado largo. Pega solo el escrito de la tutela, sin anexos ni historia clínica.",
-      );
+    const problema = problemaDelTexto(limpio);
+    if (problema) {
+      setAviso(problema);
+      irA("tutela");
       return;
     }
     setAviso("");
     setAvisoIA("");
+    setAvisoMetrica("");
     const textoEnviado = texto;
-    if (!deTodosModos && temaDetieneRevision(temaLocal)) {
+    const forzado = deTodosModos || textoForzado === texto;
+    if (!forzado && temaDetieneRevision(temaLocal)) {
+      // No se le pone puntaje: se avisa en la página del texto (se puede revisar de todos modos).
       setNoEsTutela(temaLocal);
-      setRes(null);
-      setTextoRevisado(textoEnviado);
-      requestAnimationFrame(() => resultadoRef.current?.focus());
+      irA("tutela");
+      requestAnimationFrame(() => noEsTutelaRef.current?.focus());
       return;
     }
+    if (deTodosModos) setTextoForzado(texto);
     setNoEsTutela(null);
     setTemaRevisado(temaLocal);
     setTemaIA(null);
@@ -625,15 +716,15 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
     } else {
       resultado = validarTexto(limpio, { declarados });
     }
-    try {
-      await registrarRevisionWeb({
-        data: { modalidad },
-        headers: await cabecerasDeSesion(),
-      });
-    } catch (err) {
-      console.error("[metricas] No se pudo registrar la revisión web", err);
-      setAviso("La revisión terminó, pero no pudimos registrar la métrica de uso.");
-    }
+    // La métrica de uso no detiene el resultado: se registra aparte.
+    void (async () => {
+      try {
+        await registrarRevisionWeb({ data: { modalidad }, headers: await cabecerasDeSesion() });
+      } catch (err) {
+        console.error("[metricas] No se pudo registrar la revisión web", err);
+        setAvisoMetrica("La revisión terminó, pero no pudimos registrar la métrica de uso.");
+      }
+    })();
     setRes(resultado);
     setTextoRevisado(textoEnviado);
     setDeclaradosRevisados(declarados);
@@ -645,7 +736,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
         fecha: resultado.fecha,
         modeloIA: resultado.modeloIA ?? null,
       });
-    requestAnimationFrame(() => resultadoRef.current?.focus());
+    irA("resultado");
   };
 
   // Borrar solo limpia el editor (no elimina nada del historial) y lo siguiente que se escriba
@@ -656,6 +747,7 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
     setModalidad("texto");
     setRes(null);
     setNoEsTutela(null);
+    setTextoForzado(null);
     setAviso("");
     setAvisoPDF("");
     setContinuando(null);
@@ -671,169 +763,152 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
   };
 
   const contador = texto.trim().length;
+  const titulo = (p: PasoRevision) => (el: HTMLHeadingElement | null) => {
+    titulos.current[p] = el;
+  };
+  const indicadorCargando = cargando && (
+    <p className="revision-web-cargando" role="status">
+      <Loader2 aria-hidden="true" className="animate-spin" /> Analizando con IA… Si el modelo más
+      reciente está ocupado, probamos automáticamente con el siguiente. Puede tardar unos segundos.
+    </p>
+  );
+  const botonRevisar = (etiqueta: string) => (
+    <Button
+      variant="review"
+      onClick={() => void revisar()}
+      disabled={cargando}
+      aria-busy={cargando}
+    >
+      {cargando ? (
+        <Loader2 aria-hidden="true" className="animate-spin" />
+      ) : (
+        <Search aria-hidden="true" />
+      )}{" "}
+      {cargando ? "Analizando con IA…" : etiqueta}
+    </Button>
+  );
+
   return (
-    <section className="revision-web" aria-labelledby={`${idTexto}-titulo`}>
-      <FileSearch aria-hidden="true" className="revision-web-icono" />
-      <h2 id={`${idTexto}-titulo`}>O revísala aquí mismo</h2>
-      <p className="revision-web-intro">
-        Sube el PDF o pega el texto de tu tutela y te mostramos al instante qué cumple y qué falta.
-        La revisión se hace en tu navegador: solo guardamos o enviamos algo si tú lo autorizas.
-      </p>
-      {continuando && (
-        <p className="revision-web-continuando" role="status">
-          <strong>Continuando: {continuando.titulo}.</strong> {continuando.detalle}
-        </p>
-      )}
+    <div ref={raizRef} className="revision-web">
+      <PasosRevision actual={paso} hayResultado={res !== null} onIr={irA} />
 
-      <details className="revision-web-guia">
-        <summary>
-          <HelpCircle aria-hidden="true" /> ¿Qué partes debe tener una tutela?
-        </summary>
-        <ol>
-          {PARTES_TUTELA.map((p) => (
-            <li key={p}>{p}</li>
-          ))}
-        </ol>
-        <p>
-          ¿Aún no la tienes escrita? La Defensoría del Pueblo y la Personería de tu municipio ayudan
-          gratis a redactarla.
+      {/* ───────────── Página 1: el texto de la tutela y su redacción ───────────── */}
+      <section hidden={paso !== "tutela"} aria-labelledby={`${idTexto}-titulo`}>
+        <h1 id={`${idTexto}-titulo`} ref={titulo("tutela")} tabIndex={-1}>
+          <FileSearch aria-hidden="true" className="revision-web-icono" /> Tu tutela
+        </h1>
+        <p className="revision-web-intro">
+          Sube el PDF o pega el texto de tu tutela. Mientras escribes te señalamos errores de
+          ortografía y de tono. Cuando esté lista, presiona «Revisar ahora» y en la siguiente página
+          verás qué cumple y qué falta.
         </p>
-      </details>
-
-      <SubirPDF
-        proveedorDocumentos={proveedorDocumentos}
-        acuerdoDocumentos={acuerdoDocumentos}
-        onAcuerdoDocumentos={() => setAcuerdoDocumentos(true)}
-        onTexto={(t, mensaje) => {
-          if (texto.trim() && texto !== t) setBorrado({ texto, res, id: historial.id });
-          setTexto(t);
-          setModalidad("pdf");
-          setAvisoPDF(mensaje);
-          setAviso("");
-        }}
-      />
-      {avisoPDF && (
-        <p role="status" className="revision-web-pdf-ok">
-          <Check aria-hidden="true" /> {avisoPDF}
-        </p>
-      )}
-
-      <div className="revision-web-editor">
-        <div className="revision-web-editor-texto">
-          <label htmlFor={idTexto} className="revision-web-label">
-            Texto de tu tutela
-          </label>
-          <Textarea
-            ref={textoRef}
-            id={idTexto}
-            aria-describedby={idAyuda}
-            aria-invalid={aviso ? true : undefined}
-            className="revision-web-texto"
-            lang="es-CO"
-            spellCheck
-            placeholder="Señor Juez… Yo, [nombre], identificado(a) con cédula… HECHOS… PRETENSIONES…"
-            value={texto}
-            onChange={(e) => {
-              setTexto(e.target.value);
-              if (aviso) setAviso("");
-            }}
-            onKeyDown={alTeclear}
-            maxLength={LONGITUD_MAXIMA}
-          />
-          <p id={idAyuda} className="revision-web-ayuda">
-            {contador.toLocaleString("es-CO")} caracteres
-            {contador > 0 && contador < LONGITUD_MINIMA ? ` (mínimo ${LONGITUD_MINIMA})` : ""} · No
-            incluyas historias clínicas completas · Atajo: Ctrl/⌘ + Enter
+        {continuando && (
+          <p className="revision-web-continuando" role="status">
+            <strong>Continuando: {continuando.titulo}.</strong> {continuando.detalle}
           </p>
-          {aviso && (
-            <p role="alert" className="revision-web-aviso">
-              {aviso}
-            </p>
-          )}
-        </div>
-        <RedaccionSugerida
-          texto={texto}
-          textoRevisado={textoRevisado}
-          res={res}
-          declarados={declaradosRevisados}
-          diccionario={diccionario.revision}
-          diccionarioCargando={diccionario.cargando}
-          temaLocal={temaLocal}
-          revisionId={revisionId}
-          iaDisponible={redaccionIA.disponible && proveedorIA !== null}
-          iaAutorizada={usarIA}
-          onTemaIA={setTemaIA}
-          onIrAlTexto={irAlTexto}
-          onCambiarTexto={(nuevo) => {
-            setTexto(nuevo);
-            if (aviso) setAviso("");
+        )}
+
+        <details className="revision-web-guia">
+          <summary>
+            <HelpCircle aria-hidden="true" /> ¿Qué partes debe tener una tutela?
+          </summary>
+          <ol>
+            {PARTES_TUTELA.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ol>
+          <p>
+            ¿Aún no la tienes escrita? La Defensoría del Pueblo y la Personería de tu municipio
+            ayudan gratis a redactarla.
+          </p>
+        </details>
+
+        <SubirPDF
+          proveedorDocumentos={proveedorDocumentos}
+          acuerdoDocumentos={acuerdoDocumentos}
+          onAcuerdoDocumentos={() => setAcuerdoDocumentos(true)}
+          onTexto={(t, mensaje) => {
+            if (texto.trim() && texto !== t) setBorrado({ texto, res, id: historial.id });
+            setTexto(t);
+            setModalidad("pdf");
+            setAvisoPDF(mensaje);
+            setAviso("");
           }}
         />
-      </div>
-      <CuestionarioDocumentos
-        valor={declarados}
-        onCambio={setDeclarados}
-        proveedorDocumentos={proveedorDocumentos}
-        acuerdoDocumentos={acuerdoDocumentos}
-        onAcuerdoDocumentos={() => setAcuerdoDocumentos(true)}
-      />
-      <EstadoAutorizacionIA estado={estadoIA} onAutorizar={autorizarIA} />
-      {/* Growth loop: saldo y "comparte y gana revisiones" (docs/growth-loop.md). */}
-      {iaDisponible && cuenta && (
-        <div className="revision-web-ia">
-          <SaldoRevisiones creditos={cuenta.creditos} />
-          <CompartirReferido estado={cuenta} sinSaldo={sinSaldo} />
-        </div>
-      )}
-      {cargando && (
-        <p className="revision-web-cargando" role="status">
-          <Loader2 aria-hidden="true" className="animate-spin" /> Analizando con IA… Si el modelo
-          más reciente está ocupado, probamos automáticamente con el siguiente. Puede tardar unos
-          segundos.
-        </p>
-      )}
-      {avisoIA && (
-        <p role="status" className="revision-web-aviso-ia">
-          {avisoIA}
-        </p>
-      )}
-      <GuardarEnHistorial h={historial} />
-      <div className="revision-web-acciones">
-        <Button
-          variant="review"
-          onClick={() => void revisar()}
-          disabled={cargando}
-          aria-busy={cargando}
-        >
-          {cargando ? (
-            <Loader2 aria-hidden="true" className="animate-spin" />
-          ) : (
-            <Search aria-hidden="true" />
-          )}{" "}
-          {cargando ? "Analizando con IA…" : res ? "Revisar de nuevo" : "Revisar ahora"}
-        </Button>
-        {(texto || res) && (
-          <Button variant="ghost" onClick={borrar}>
-            Borrar texto
-          </Button>
+        {avisoPDF && (
+          <p role="status" className="revision-web-pdf-ok">
+            <Check aria-hidden="true" /> {avisoPDF}
+          </p>
         )}
-        {borrado && !texto && (
-          <Button
-            variant="outline"
-            onClick={() => {
-              setTexto(borrado.texto);
-              setRes(borrado.res);
-              historial.setId(borrado.id);
-              setBorrado(null);
+
+        <div className="revision-web-editor">
+          <div className="revision-web-editor-texto">
+            <label htmlFor={idTexto} className="revision-web-label">
+              Texto de tu tutela
+            </label>
+            <Textarea
+              ref={textoRef}
+              id={idTexto}
+              aria-describedby={idAyuda}
+              aria-invalid={aviso ? true : undefined}
+              className="revision-web-texto"
+              lang="es-CO"
+              spellCheck
+              placeholder="Señor Juez… Yo, [nombre], identificado(a) con cédula… HECHOS… PRETENSIONES…"
+              value={texto}
+              onChange={(e) => {
+                setTexto(e.target.value);
+                if (aviso) setAviso("");
+              }}
+              onKeyDown={alTeclear}
+              maxLength={LONGITUD_MAXIMA}
+            />
+            <p id={idAyuda} className="revision-web-ayuda">
+              {contador.toLocaleString("es-CO")} caracteres
+              {contador > 0 && contador < LONGITUD_MINIMA ? ` (mínimo ${LONGITUD_MINIMA})` : ""} ·
+              No incluyas historias clínicas completas · Atajo: Ctrl/⌘ + Enter
+            </p>
+            {aviso && (
+              <p role="alert" className="revision-web-aviso">
+                {aviso}
+              </p>
+            )}
+          </div>
+          <RedaccionSugerida
+            texto={texto}
+            textoRevisado={textoRevisado}
+            res={res}
+            declarados={declaradosRevisados}
+            diccionario={diccionario.revision}
+            diccionarioCargando={diccionario.cargando}
+            temaLocal={temaLocal}
+            revisionId={revisionId}
+            iaDisponible={redaccionIA.disponible && proveedorIA !== null}
+            iaAutorizada={usarIA}
+            onTemaIA={setTemaIA}
+            onIrAlTexto={irAlTexto}
+            onCambiarTexto={(nuevo) => {
+              setTexto(nuevo);
+              if (aviso) setAviso("");
             }}
-          >
-            <RotateCcw aria-hidden="true" /> Deshacer borrado
-          </Button>
+          />
+        </div>
+
+        <GuardarEnHistorial h={historial} />
+        <EstadoAutorizacionIA estado={estadoIA} onAutorizar={autorizarIA} />
+        {iaDisponible && cuenta && (
+          <div className="revision-web-ia">
+            <SaldoRevisiones creditos={cuenta.creditos} />
+          </div>
         )}
-      </div>
-      <div ref={resultadoRef} tabIndex={-1} aria-live="polite" className="revision-web-resultado">
+
         {noEsTutela && (
-          <div className="resultado resultado-no-tutela">
+          <div
+            ref={noEsTutelaRef}
+            tabIndex={-1}
+            className="resultado resultado-no-tutela"
+            aria-live="polite"
+          >
             <h2>
               <AlertTriangle aria-hidden="true" /> Esto no parece una tutela de salud
             </h2>
@@ -847,25 +922,136 @@ export function RevisionWeb({ tutelaId }: { tutelaId?: string | undefined } = {}
             </Button>
           </div>
         )}
-        {res && (
-          <Resultado
-            res={res}
-            desactualizado={texto !== textoRevisado || declarados !== declaradosRevisados}
-            avisoTema={
-              temaIA && !temaIA.esTutelaDeSalud
-                ? `La IA indica que tu texto no parece una tutela de salud. ${temaIA.observacion}`.trim()
-                : temaRevisado && !temaRevisado.esTutelaDeSalud
-                  ? temaRevisado.observacion
-                  : null
-            }
-            anexos={
-              declaradosRevisados
-                ? listaAnexos(declaradosRevisados, extraerHeuristico(textoRevisado))
-                : null
-            }
-          />
+
+        {indicadorCargando}
+        <div className="revision-web-acciones">
+          {botonRevisar(res ? "Revisar de nuevo" : "Revisar ahora")}
+          {res && (
+            <Button variant="outline" onClick={() => irA("resultado")}>
+              Ver el último resultado
+            </Button>
+          )}
+          {(texto || res) && (
+            <Button variant="ghost" onClick={borrar}>
+              Borrar texto
+            </Button>
+          )}
+          {borrado && !texto && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTexto(borrado.texto);
+                setRes(borrado.res);
+                historial.setId(borrado.id);
+                setBorrado(null);
+              }}
+            >
+              <RotateCcw aria-hidden="true" /> Deshacer borrado
+            </Button>
+          )}
+        </div>
+      </section>
+
+      {/* ───────────── Página 2: el resultado y lo que puede hacer después ───────────── */}
+      <section hidden={paso !== "resultado"} aria-labelledby={`${idTexto}-resultado`}>
+        <h1 id={`${idTexto}-resultado`} ref={titulo("resultado")} tabIndex={-1}>
+          Resultado de tu revisión
+        </h1>
+        {avisoIA && (
+          <p role="status" className="revision-web-aviso-ia">
+            {avisoIA}
+          </p>
         )}
-      </div>
-    </section>
+        {avisoMetrica && (
+          <p role="status" className="revision-web-aviso-ia">
+            {avisoMetrica}
+          </p>
+        )}
+        <div aria-live="polite" className="revision-web-resultado">
+          {res && (
+            <Resultado
+              res={res}
+              desactualizado={texto !== textoRevisado || declarados !== declaradosRevisados}
+              avisoTema={
+                temaIA && !temaIA.esTutelaDeSalud
+                  ? `La IA indica que tu texto no parece una tutela de salud. ${temaIA.observacion}`.trim()
+                  : temaRevisado && !temaRevisado.esTutelaDeSalud
+                    ? temaRevisado.observacion
+                    : null
+              }
+              anexos={
+                declaradosRevisados
+                  ? listaAnexos(declaradosRevisados, extraerHeuristico(textoRevisado))
+                  : null
+              }
+            />
+          )}
+        </div>
+
+        <section className="revision-siguientes" aria-labelledby={`${idTexto}-siguientes`}>
+          <h2 id={`${idTexto}-siguientes`}>¿Qué sigue?</h2>
+          <ul>
+            <li className="revision-siguiente">
+              <PenLine aria-hidden="true" />
+              <div>
+                <h3>Corrige tu texto</h3>
+                <p>
+                  Junto a tu texto te proponemos cómo escribir las partes que faltan
+                  {usarIA && iaDisponible ? " y las mejoras de redacción de la IA" : ""}. Las
+                  agregas con un clic y luego la revisas de nuevo.
+                </p>
+                <Button variant="review" onClick={() => irA("tutela")}>
+                  <PenLine aria-hidden="true" /> Corregir mi texto
+                </Button>
+              </div>
+            </li>
+            <li className="revision-siguiente">
+              <Paperclip aria-hidden="true" />
+              <div>
+                <h3>Revisa también tus documentos</h3>
+                <p>
+                  {declaradosRevisados
+                    ? "Ya tuvimos en cuenta lo que nos contaste de tus documentos. Puedes cambiar tus respuestas."
+                    : "Con 4 preguntas comparamos tu orden médica y la respuesta de la EPS con lo que dice la tutela, y te decimos qué adjuntar. No tienes que enviarnos los documentos."}
+                </p>
+                <Button variant="outline" onClick={() => irA("documentos")}>
+                  <Paperclip aria-hidden="true" />{" "}
+                  {declaradosRevisados
+                    ? "Cambiar mis respuestas"
+                    : "Responder preguntas sobre mis documentos"}
+                </Button>
+              </div>
+            </li>
+          </ul>
+          {iaDisponible && cuenta && <CompartirReferido estado={cuenta} sinSaldo={sinSaldo} />}
+        </section>
+      </section>
+
+      {/* ───────────── Página 3 (opcional): los documentos ───────────── */}
+      <section hidden={paso !== "documentos"} aria-labelledby={`${idTexto}-documentos`}>
+        <h1 id={`${idTexto}-documentos`} ref={titulo("documentos")} tabIndex={-1}>
+          Tus documentos
+        </h1>
+        <p className="revision-web-intro">
+          Responde lo que sepas sobre tus documentos y actualiza la revisión. Así comparamos lo que
+          dice tu tutela con lo que tienes y te decimos qué adjuntar.
+        </p>
+        <CuestionarioDocumentos
+          valor={declarados}
+          onCambio={setDeclarados}
+          proveedorDocumentos={proveedorDocumentos}
+          acuerdoDocumentos={acuerdoDocumentos}
+          onAcuerdoDocumentos={() => setAcuerdoDocumentos(true)}
+          abierto
+        />
+        {indicadorCargando}
+        <div className="revision-web-acciones">
+          {botonRevisar("Actualizar la revisión")}
+          <Button variant="ghost" onClick={() => irA("resultado")}>
+            <ArrowLeft aria-hidden="true" /> Volver al resultado
+          </Button>
+        </div>
+      </section>
+    </div>
   );
 }

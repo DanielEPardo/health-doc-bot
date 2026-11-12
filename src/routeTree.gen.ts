@@ -21,6 +21,10 @@ import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as ApiClerkWebhookRouteImport } from './routes/api/clerk-webhook'
 import { Route as ApiWhatsappRouteImport } from './routes/api/whatsapp'
 import { Route as RCodigoRouteImport } from './routes/r.$codigo'
+import { Route as RevisionIndexRouteImport } from './routes/revision.index'
+import { Route as RevisionDocumentosRouteImport } from './routes/revision.documentos'
+import { Route as RevisionResultadoRouteImport } from './routes/revision.resultado'
+import { Route as RevisionTutelaRouteImport } from './routes/revision.tutela'
 import { Route as ApiPublicTwilioWhatsappRouteImport } from './routes/api/public/twilio/whatsapp'
 import { Route as ApiPublicWhatsappEvolutionRouteImport } from './routes/api/public/whatsapp/evolution'
 
@@ -84,6 +88,26 @@ const RCodigoRoute = RCodigoRouteImport.update({
   path: '/r/$codigo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RevisionIndexRoute = RevisionIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => RevisionRoute,
+} as any)
+const RevisionDocumentosRoute = RevisionDocumentosRouteImport.update({
+  id: '/documentos',
+  path: '/documentos',
+  getParentRoute: () => RevisionRoute,
+} as any)
+const RevisionResultadoRoute = RevisionResultadoRouteImport.update({
+  id: '/resultado',
+  path: '/resultado',
+  getParentRoute: () => RevisionRoute,
+} as any)
+const RevisionTutelaRoute = RevisionTutelaRouteImport.update({
+  id: '/tutela',
+  path: '/tutela',
+  getParentRoute: () => RevisionRoute,
+} as any)
 const ApiPublicTwilioWhatsappRoute = ApiPublicTwilioWhatsappRouteImport.update({
   id: '/api/public/twilio/whatsapp',
   path: '/api/public/twilio/whatsapp',
@@ -102,13 +126,17 @@ export interface FileRoutesByFullPath {
   '/mis-tutelas': typeof MisTutelasRoute
   '/perfil': typeof PerfilRoute
   '/politica-de-datos': typeof PoliticaDeDatosRoute
-  '/revision': typeof RevisionRoute
+  '/revision': typeof RevisionRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/terminos': typeof TerminosRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
   '/r/$codigo': typeof RCodigoRoute
+  '/revision/documentos': typeof RevisionDocumentosRoute
+  '/revision/resultado': typeof RevisionResultadoRoute
+  '/revision/tutela': typeof RevisionTutelaRoute
+  '/revision/': typeof RevisionIndexRoute
   '/api/public/twilio/whatsapp': typeof ApiPublicTwilioWhatsappRoute
   '/api/public/whatsapp/evolution': typeof ApiPublicWhatsappEvolutionRoute
 }
@@ -118,13 +146,16 @@ export interface FileRoutesByTo {
   '/mis-tutelas': typeof MisTutelasRoute
   '/perfil': typeof PerfilRoute
   '/politica-de-datos': typeof PoliticaDeDatosRoute
-  '/revision': typeof RevisionRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/terminos': typeof TerminosRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
   '/r/$codigo': typeof RCodigoRoute
+  '/revision/documentos': typeof RevisionDocumentosRoute
+  '/revision/resultado': typeof RevisionResultadoRoute
+  '/revision/tutela': typeof RevisionTutelaRoute
+  '/revision': typeof RevisionIndexRoute
   '/api/public/twilio/whatsapp': typeof ApiPublicTwilioWhatsappRoute
   '/api/public/whatsapp/evolution': typeof ApiPublicWhatsappEvolutionRoute
 }
@@ -135,13 +166,17 @@ export interface FileRoutesById {
   '/mis-tutelas': typeof MisTutelasRoute
   '/perfil': typeof PerfilRoute
   '/politica-de-datos': typeof PoliticaDeDatosRoute
-  '/revision': typeof RevisionRoute
+  '/revision': typeof RevisionRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/terminos': typeof TerminosRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
   '/r/$codigo': typeof RCodigoRoute
+  '/revision/documentos': typeof RevisionDocumentosRoute
+  '/revision/resultado': typeof RevisionResultadoRoute
+  '/revision/tutela': typeof RevisionTutelaRoute
+  '/revision/': typeof RevisionIndexRoute
   '/api/public/twilio/whatsapp': typeof ApiPublicTwilioWhatsappRoute
   '/api/public/whatsapp/evolution': typeof ApiPublicWhatsappEvolutionRoute
 }
@@ -160,6 +195,10 @@ export interface FileRouteTypes {
     | '/api/clerk-webhook'
     | '/api/whatsapp'
     | '/r/$codigo'
+    | '/revision/documentos'
+    | '/revision/resultado'
+    | '/revision/tutela'
+    | '/revision/'
     | '/api/public/twilio/whatsapp'
     | '/api/public/whatsapp/evolution'
   fileRoutesByTo: FileRoutesByTo
@@ -169,13 +208,16 @@ export interface FileRouteTypes {
     | '/mis-tutelas'
     | '/perfil'
     | '/politica-de-datos'
-    | '/revision'
     | '/sign-in'
     | '/sign-up'
     | '/terminos'
     | '/api/clerk-webhook'
     | '/api/whatsapp'
     | '/r/$codigo'
+    | '/revision/documentos'
+    | '/revision/resultado'
+    | '/revision/tutela'
+    | '/revision'
     | '/api/public/twilio/whatsapp'
     | '/api/public/whatsapp/evolution'
   id:
@@ -192,6 +234,10 @@ export interface FileRouteTypes {
     | '/api/clerk-webhook'
     | '/api/whatsapp'
     | '/r/$codigo'
+    | '/revision/documentos'
+    | '/revision/resultado'
+    | '/revision/tutela'
+    | '/revision/'
     | '/api/public/twilio/whatsapp'
     | '/api/public/whatsapp/evolution'
   fileRoutesById: FileRoutesById
@@ -202,7 +248,7 @@ export interface RootRouteChildren {
   MisTutelasRoute: typeof MisTutelasRoute
   PerfilRoute: typeof PerfilRoute
   PoliticaDeDatosRoute: typeof PoliticaDeDatosRoute
-  RevisionRoute: typeof RevisionRoute
+  RevisionRoute: typeof RevisionRouteWithChildren
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
   TerminosRoute: typeof TerminosRoute
@@ -299,6 +345,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RCodigoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/revision/': {
+      id: '/revision/'
+      path: '/'
+      fullPath: '/revision/'
+      preLoaderRoute: typeof RevisionIndexRouteImport
+      parentRoute: typeof RevisionRoute
+    }
+    '/revision/documentos': {
+      id: '/revision/documentos'
+      path: '/documentos'
+      fullPath: '/revision/documentos'
+      preLoaderRoute: typeof RevisionDocumentosRouteImport
+      parentRoute: typeof RevisionRoute
+    }
+    '/revision/resultado': {
+      id: '/revision/resultado'
+      path: '/resultado'
+      fullPath: '/revision/resultado'
+      preLoaderRoute: typeof RevisionResultadoRouteImport
+      parentRoute: typeof RevisionRoute
+    }
+    '/revision/tutela': {
+      id: '/revision/tutela'
+      path: '/tutela'
+      fullPath: '/revision/tutela'
+      preLoaderRoute: typeof RevisionTutelaRouteImport
+      parentRoute: typeof RevisionRoute
+    }
     '/api/public/twilio/whatsapp': {
       id: '/api/public/twilio/whatsapp'
       path: '/api/public/twilio/whatsapp'
@@ -316,13 +390,31 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface RevisionRouteChildren {
+  RevisionDocumentosRoute: typeof RevisionDocumentosRoute
+  RevisionResultadoRoute: typeof RevisionResultadoRoute
+  RevisionTutelaRoute: typeof RevisionTutelaRoute
+  RevisionIndexRoute: typeof RevisionIndexRoute
+}
+
+const RevisionRouteChildren: RevisionRouteChildren = {
+  RevisionDocumentosRoute: RevisionDocumentosRoute,
+  RevisionResultadoRoute: RevisionResultadoRoute,
+  RevisionTutelaRoute: RevisionTutelaRoute,
+  RevisionIndexRoute: RevisionIndexRoute,
+}
+
+const RevisionRouteWithChildren = RevisionRoute._addFileChildren(
+  RevisionRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MetricasRoute: MetricasRoute,
   MisTutelasRoute: MisTutelasRoute,
   PerfilRoute: PerfilRoute,
   PoliticaDeDatosRoute: PoliticaDeDatosRoute,
-  RevisionRoute: RevisionRoute,
+  RevisionRoute: RevisionRouteWithChildren,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
   TerminosRoute: TerminosRoute,
