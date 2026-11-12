@@ -53,7 +53,14 @@ function igualSeguro(a: string, b: string): boolean {
 }
 
 export interface MensajeEvolution {
-  key?: { remoteJid?: string; fromMe?: boolean; id?: string };
+  key?: {
+    remoteJid?: string;
+    /** Con el modo de privacidad LID, el número real llega aquí (remoteJid termina en @lid). */
+    remoteJidAlt?: string;
+    senderPn?: string;
+    fromMe?: boolean;
+    id?: string;
+  };
   message?: {
     conversation?: string;
     extendedTextMessage?: { text?: string };
@@ -119,10 +126,14 @@ export async function manejarWebhookEvolution(
   const enviar = cfg.enviar ?? ((n: string, t: string) => enviarPorEvolution(cfg, n, t));
 
   for (const m of lista) {
-    const jid = m.key?.remoteJid ?? "";
     const id = m.key?.id;
     // Solo chats individuales; ignora grupos, estados y mensajes propios.
-    if (!id || m.key?.fromMe || !jid.endsWith("@s.whatsapp.net")) continue;
+    // WhatsApp puede entregar el chat como «…@lid» (privacidad LID) con el número en remoteJidAlt/senderPn.
+    const jid = [m.key?.remoteJid, m.key?.remoteJidAlt, m.key?.senderPn].find((j) =>
+      j?.endsWith("@s.whatsapp.net"),
+    ) ?? "";
+    const esChatIndividual = /@(s\.whatsapp\.net|lid)$/.test(m.key?.remoteJid ?? "");
+    if (!id || m.key?.fromMe || !esChatIndividual || !jid) continue;
     const telefono = jid.split("@")[0]!.replace(/\D/g, "");
     if (telefono.length < 8 || telefono.length > 15) continue;
     if (!(await cfg.bot.almacen.marcarProcesado(`evolution:${id}`))) continue;
