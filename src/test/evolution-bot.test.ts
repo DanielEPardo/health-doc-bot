@@ -72,6 +72,12 @@ describe("Webhook de Evolution API", () => {
     );
     expect(env[0]![0]).toBe("573106907908");
   });
+
+  it("responde al identificador @lid cuando WhatsApp no envía el número real", async () => {
+    const env: string[][] = [];
+    await manejarWebhookEvolution(pet(msg("M", "Hola", { remoteJid: "218123456789703@lid" })), cfg(env));
+    expect(env[0]![0]).toBe("218123456789703@lid");
+  });
 });
 
 describe("Evolution API — tutela en PDF", () => {

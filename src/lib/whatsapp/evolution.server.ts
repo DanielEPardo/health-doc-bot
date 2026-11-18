@@ -132,10 +132,14 @@ export async function manejarWebhookEvolution(
     const jid = [m.key?.remoteJid, m.key?.remoteJidAlt, m.key?.senderPn].find((j) =>
       j?.endsWith("@s.whatsapp.net"),
     ) ?? "";
-    const esChatIndividual = /@(s\.whatsapp\.net|lid)$/.test(m.key?.remoteJid ?? "");
-    if (!id || m.key?.fromMe || !esChatIndividual || !jid) continue;
-    const telefono = jid.split("@")[0]!.replace(/\D/g, "");
-    if (telefono.length < 8 || telefono.length > 15) continue;
+    const remoto = m.key?.remoteJid ?? "";
+    const esLid = /^\d+@lid$/.test(remoto);
+    const esChatIndividual = esLid || remoto.endsWith("@s.whatsapp.net");
+    if (!id || m.key?.fromMe || !esChatIndividual) continue;
+    // Sin número real (solo «…@lid»): se responde al propio identificador LID, que Evolution acepta.
+    const telefono = jid ? jid.split("@")[0]!.replace(/\D/g, "") : esLid ? remoto : "";
+    if (jid && (telefono.length < 8 || telefono.length > 15)) continue;
+    if (!telefono) continue;
     if (!(await cfg.bot.almacen.marcarProcesado(`evolution:${id}`))) continue;
 
     const txt = (m.message?.conversation ?? m.message?.extendedTextMessage?.text ?? "").slice(
