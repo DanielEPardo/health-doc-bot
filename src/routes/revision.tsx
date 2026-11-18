@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button";
  *   /revision            → inicio: elegir WhatsApp o el revisor de la página (revision.index.tsx)
  *   /revision/tutela     → 1. pegar o subir la tutela y corregir la redacción
  *   /revision/resultado  → 2. qué cumple, qué falta y qué hacer después
- *   /revision/documentos → 3. (opcional) preguntas sobre los documentos para afinar la revisión
+ *   /revision/correcciones → 3. las correcciones propuestas, que se aplican con un clic
+ *   /revision/documentos → 4. (opcional) preguntas sobre los documentos para afinar la revisión
  * El revisor (RevisionWeb) vive aquí y no en cada página para que el texto y el resultado se
  * conserven al ir y volver entre páginas sin guardarlos en el navegador.
  */
@@ -45,12 +46,18 @@ export const Route = createFileRoute("/revision")({
 const RUTA_DEL_PASO = {
   tutela: "/revision/tutela",
   resultado: "/revision/resultado",
+  correcciones: "/revision/correcciones",
   documentos: "/revision/documentos",
 } as const satisfies Record<PasoRevision, string>;
 
 function pasoDeLaRuta(ruta: string): PasoRevision | null {
   const paso = ruta.replace(/\/+$/, "").split("/")[2];
-  return paso === "tutela" || paso === "resultado" || paso === "documentos" ? paso : null;
+  return paso === "tutela" ||
+    paso === "resultado" ||
+    paso === "correcciones" ||
+    paso === "documentos"
+    ? paso
+    : null;
 }
 
 function SessionActions() {

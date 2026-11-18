@@ -199,13 +199,18 @@ describe("Redacción sugerida (panel al lado del texto)", () => {
       },
     });
     fireEvent.click(screen.getByRole("button", { name: /revisión gratuita/i }));
-    // Del resultado se vuelve a la página del texto, donde están las partes propuestas.
+    // Del resultado, «Corregir mi texto» lleva a su propio apartado con las propuestas.
     fireEvent.click(screen.getByRole("button", { name: /Corregir mi texto/ }));
+    expect(screen.getByRole("heading", { level: 1, name: /Corrige tu texto/ })).toBeVisible();
     const panel = screen.getByRole("complementary", { name: "Redacción sugerida" });
+    expect(panel).toBeVisible();
     const tarjeta = within(panel).getByText("Juramento").closest("li")!;
     fireEvent.click(within(tarjeta).getByRole("button", { name: /Agregar al final/ }));
     expect(caja.value).toMatch(/\n\nJURAMENTO\nBajo la gravedad del juramento/);
     expect(within(tarjeta).getByRole("button", { name: /Agregada/ })).toBeDisabled();
+    // Desde ahí se revisa de nuevo sin volver a la página del texto.
+    fireEvent.click(screen.getByRole("button", { name: /revisión gratuita/i }));
+    expect(screen.getByRole("heading", { level: 1, name: /Resultado/ })).toBeVisible();
   });
 });
 

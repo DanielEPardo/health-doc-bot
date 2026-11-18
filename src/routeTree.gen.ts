@@ -22,6 +22,7 @@ import { Route as ApiClerkWebhookRouteImport } from './routes/api/clerk-webhook'
 import { Route as ApiWhatsappRouteImport } from './routes/api/whatsapp'
 import { Route as RCodigoRouteImport } from './routes/r.$codigo'
 import { Route as RevisionIndexRouteImport } from './routes/revision.index'
+import { Route as RevisionCorreccionesRouteImport } from './routes/revision.correcciones'
 import { Route as RevisionDocumentosRouteImport } from './routes/revision.documentos'
 import { Route as RevisionResultadoRouteImport } from './routes/revision.resultado'
 import { Route as RevisionTutelaRouteImport } from './routes/revision.tutela'
@@ -93,6 +94,11 @@ const RevisionIndexRoute = RevisionIndexRouteImport.update({
   path: '/',
   getParentRoute: () => RevisionRoute,
 } as any)
+const RevisionCorreccionesRoute = RevisionCorreccionesRouteImport.update({
+  id: '/correcciones',
+  path: '/correcciones',
+  getParentRoute: () => RevisionRoute,
+} as any)
 const RevisionDocumentosRoute = RevisionDocumentosRouteImport.update({
   id: '/documentos',
   path: '/documentos',
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
   '/r/$codigo': typeof RCodigoRoute
+  '/revision/correcciones': typeof RevisionCorreccionesRoute
   '/revision/documentos': typeof RevisionDocumentosRoute
   '/revision/resultado': typeof RevisionResultadoRoute
   '/revision/tutela': typeof RevisionTutelaRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
   '/r/$codigo': typeof RCodigoRoute
+  '/revision/correcciones': typeof RevisionCorreccionesRoute
   '/revision/documentos': typeof RevisionDocumentosRoute
   '/revision/resultado': typeof RevisionResultadoRoute
   '/revision/tutela': typeof RevisionTutelaRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/whatsapp': typeof ApiWhatsappRoute
   '/r/$codigo': typeof RCodigoRoute
+  '/revision/correcciones': typeof RevisionCorreccionesRoute
   '/revision/documentos': typeof RevisionDocumentosRoute
   '/revision/resultado': typeof RevisionResultadoRoute
   '/revision/tutela': typeof RevisionTutelaRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/api/clerk-webhook'
     | '/api/whatsapp'
     | '/r/$codigo'
+    | '/revision/correcciones'
     | '/revision/documentos'
     | '/revision/resultado'
     | '/revision/tutela'
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | '/api/clerk-webhook'
     | '/api/whatsapp'
     | '/r/$codigo'
+    | '/revision/correcciones'
     | '/revision/documentos'
     | '/revision/resultado'
     | '/revision/tutela'
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | '/api/clerk-webhook'
     | '/api/whatsapp'
     | '/r/$codigo'
+    | '/revision/correcciones'
     | '/revision/documentos'
     | '/revision/resultado'
     | '/revision/tutela'
@@ -352,6 +364,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RevisionIndexRouteImport
       parentRoute: typeof RevisionRoute
     }
+    '/revision/correcciones': {
+      id: '/revision/correcciones'
+      path: '/correcciones'
+      fullPath: '/revision/correcciones'
+      preLoaderRoute: typeof RevisionCorreccionesRouteImport
+      parentRoute: typeof RevisionRoute
+    }
     '/revision/documentos': {
       id: '/revision/documentos'
       path: '/documentos'
@@ -391,6 +410,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface RevisionRouteChildren {
+  RevisionCorreccionesRoute: typeof RevisionCorreccionesRoute
   RevisionDocumentosRoute: typeof RevisionDocumentosRoute
   RevisionResultadoRoute: typeof RevisionResultadoRoute
   RevisionTutelaRoute: typeof RevisionTutelaRoute
@@ -398,6 +418,7 @@ interface RevisionRouteChildren {
 }
 
 const RevisionRouteChildren: RevisionRouteChildren = {
+  RevisionCorreccionesRoute: RevisionCorreccionesRoute,
   RevisionDocumentosRoute: RevisionDocumentosRoute,
   RevisionResultadoRoute: RevisionResultadoRoute,
   RevisionTutelaRoute: RevisionTutelaRoute,

@@ -288,6 +288,9 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
 /* Página del resultado: qué hacer después. */
 .revision-siguientes { margin-top:36px; padding-top:28px; border-top:1px solid var(--border); }
 .revision-siguientes > ul { display:grid; gap:16px; margin:14px 0 8px; }
+.revision-siguiente-panel { display:grid; gap:4px; }
+.revision-siguiente-panel .revision-web-acciones { margin-top:12px; }
+.revision-redaccion-lugar { min-width:0; }
 .revision-siguiente { display:flex; gap:14px; padding:18px 20px; border:1px solid var(--border); border-radius:8px; }
 .revision-siguiente > svg { width:26px; height:26px; flex-shrink:0; color:var(--primary); margin-top:2px; }
 .revision-siguiente h3 { font-size:19px; font-weight:700; margin-bottom:6px; }

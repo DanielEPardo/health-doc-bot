@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -26,6 +27,7 @@ import {
   Search,
   XCircle,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -406,10 +408,11 @@ function Resultado({
  * `tutelaId` abre una tutela del historial para continuarla.
  */
 /** Páginas del revisor web: /revision/tutela → /revision/resultado → /revision/documentos. */
-export type PasoRevision = "tutela" | "resultado" | "documentos";
+export type PasoRevision = "tutela" | "resultado" | "correcciones" | "documentos";
 const PASOS: { paso: PasoRevision; titulo: string }[] = [
   { paso: "tutela", titulo: "Tu tutela" },
   { paso: "resultado", titulo: "Resultado" },
+  { paso: "correcciones", titulo: "Corregir" },
   { paso: "documentos", titulo: "Documentos (opcional)" },
 ];
 
@@ -818,8 +821,50 @@ export function RevisionWeb({
     </>
   );
 
+  // «Redacción sugerida» es UNA sola instancia que se muestra junto al texto (página 1) y en
+  // «Corrige tu texto» (/revision/correcciones). Se mueve su contenedor en el DOM en vez de montarla dos veces:
+  // así no pierde las sugerencias ni vuelve a pedir la IA al cambiar de página.
+  const [contenedorRedaccion, setContenedorRedaccion] = useState<HTMLDivElement | null>(null);
+  const lugarEnTexto = useRef<HTMLDivElement>(null);
+  const lugarEnCorrecciones = useRef<HTMLDivElement>(null);
+  useEffect(() => setContenedorRedaccion(document.createElement("div")), []);
+  useLayoutEffect(() => {
+    const lugar = (paso === "correcciones" ? lugarEnCorrecciones : lugarEnTexto).current;
+    if (contenedorRedaccion && lugar && contenedorRedaccion.parentNode !== lugar)
+      lugar.appendChild(contenedorRedaccion);
+  }, [paso, contenedorRedaccion, res]);
+  const panelRedaccion =
+    contenedorRedaccion &&
+    createPortal(
+      <RedaccionSugerida
+        texto={texto}
+        textoRevisado={textoRevisado}
+        res={res}
+        declarados={declaradosRevisados}
+        diccionario={diccionario.revision}
+        diccionarioCargando={diccionario.cargando}
+        temaLocal={temaLocal}
+        revisionId={revisionId}
+        revisionConIA={ultimaConIA}
+        iaDisponible={redaccionIA.disponible && proveedorIA !== null}
+        iaAutorizada={usarIA}
+        onTemaIA={setTemaIA}
+        onIrAlTexto={(fragmento, opciones) => {
+          // Desde el resultado, «ver en el texto» lleva a la página del texto.
+          if (paso !== "tutela") irA("tutela");
+          irAlTexto(fragmento, opciones);
+        }}
+        onCambiarTexto={(nuevo) => {
+          setTexto(nuevo);
+          if (aviso) setAviso("");
+        }}
+      />,
+      contenedorRedaccion,
+    );
+
   return (
     <div ref={raizRef} className="revision-web">
+      {panelRedaccion}
       <PasosRevision actual={paso} hayResultado={res !== null} onIr={irA} />
 
       {/* ───────────── Página 1: el texto de la tutela y su redacción ───────────── */}
@@ -904,25 +949,7 @@ export function RevisionWeb({
               </p>
             )}
           </div>
-          <RedaccionSugerida
-            texto={texto}
-            textoRevisado={textoRevisado}
-            res={res}
-            declarados={declaradosRevisados}
-            diccionario={diccionario.revision}
-            diccionarioCargando={diccionario.cargando}
-            temaLocal={temaLocal}
-            revisionId={revisionId}
-            revisionConIA={ultimaConIA}
-            iaDisponible={redaccionIA.disponible && proveedorIA !== null}
-            iaAutorizada={usarIA}
-            onTemaIA={setTemaIA}
-            onIrAlTexto={irAlTexto}
-            onCambiarTexto={(nuevo) => {
-              setTexto(nuevo);
-              if (aviso) setAviso("");
-            }}
-          />
+          <div ref={lugarEnTexto} className="revision-redaccion-lugar" />
         </div>
 
         <GuardarEnHistorial h={historial} />
@@ -1036,11 +1063,11 @@ export function RevisionWeb({
               <div>
                 <h3>Corrige tu texto</h3>
                 <p>
-                  Junto a tu texto te proponemos cómo escribir las partes que faltan
-                  {usarIA && iaDisponible ? " y las mejoras de redacción de la IA" : ""}. Las
-                  agregas con un clic y luego la revisas de nuevo.
+                  Te proponemos cómo escribir las partes que faltan
+                  {usarIA && iaDisponible ? " y las mejoras de redacción de la IA" : ""}. Cada
+                  cambio se agrega a tu texto con un clic; cuando termines, revísala de nuevo.
                 </p>
-                <Button variant="review" onClick={() => irA("tutela")}>
+                <Button variant="review" onClick={() => irA("correcciones")}>
                   <PenLine aria-hidden="true" /> Corregir mi texto
                 </Button>
               </div>
@@ -1067,7 +1094,29 @@ export function RevisionWeb({
         </section>
       </section>
 
-      {/* ───────────── Página 3 (opcional): los documentos ───────────── */}
+      {/* ───────────── Página 3: corregir el texto con un clic ───────────── */}
+      <section hidden={paso !== "correcciones"} aria-labelledby={`${idTexto}-correcciones`}>
+        <h1 id={`${idTexto}-correcciones`} ref={titulo("correcciones")} tabIndex={-1}>
+          <PenLine aria-hidden="true" className="revision-web-icono" /> Corrige tu texto
+        </h1>
+        <p className="revision-web-intro">
+          Presiona «Agregar» o «Aplicar» en cada propuesta y el cambio queda en tu tutela. Cuando
+          termines, revísala de nuevo para ver cómo mejoró.
+        </p>
+        <div ref={lugarEnCorrecciones} className="revision-redaccion-lugar" />
+        {indicadorCargando}
+        <div className="revision-web-acciones">
+          {botonesRevisar}
+          <Button variant="outline" onClick={() => irA("tutela")}>
+            <FileSearch aria-hidden="true" /> Ver y editar mi texto
+          </Button>
+          <Button variant="ghost" onClick={() => irA("resultado")}>
+            <ArrowLeft aria-hidden="true" /> Volver al resultado
+          </Button>
+        </div>
+      </section>
+
+      {/* ───────────── Página 4 (opcional): los documentos ───────────── */}
       <section hidden={paso !== "documentos"} aria-labelledby={`${idTexto}-documentos`}>
         <h1 id={`${idTexto}-documentos`} ref={titulo("documentos")} tabIndex={-1}>
           Tus documentos
