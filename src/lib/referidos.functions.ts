@@ -19,7 +19,7 @@ import {
 export const getEstadoCuenta = createServerFn({ method: "POST" })
   .inputValidator((data?: { codigo?: string | null }) => ({ codigo: data?.codigo ?? null }))
   .handler(async ({ data }): Promise<EstadoCuenta> => {
-    const { usuarioDeLaSolicitud } = await import("@/lib/sesion.server");
+    const { usuarioDeLaSolicitud, esAdministrador } = await import("@/lib/sesion.server");
     const { obtenerOCrearCuenta } = await import("@/lib/referidos/servicio.server");
     const { crearAlmacenReferidos } = await import("@/lib/referidos/almacen.server");
 
@@ -32,6 +32,7 @@ export const getEstadoCuenta = createServerFn({ method: "POST" })
       creditos: cuenta.creditos,
       invitados: invitados.total,
       invitadosActivados: invitados.activados,
+      ...(esAdministrador(userId) ? { ilimitado: true } : {}),
     };
   });
 

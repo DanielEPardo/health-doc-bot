@@ -244,6 +244,7 @@ export function RedaccionSugerida({
   revisionId,
   iaDisponible,
   iaAutorizada,
+  revisionConIA = true,
   onTemaIA,
   onIrAlTexto,
   onCambiarTexto,
@@ -261,6 +262,8 @@ export function RedaccionSugerida({
   revisionId: number;
   iaDisponible: boolean;
   iaAutorizada: boolean;
+  /** false si la última revisión fue la gratuita: entonces no se pide la IA sola. */
+  revisionConIA?: boolean;
   onTemaIA?: (tema: TemaTutela | null) => void;
   /** Lleva al lugar del texto donde está una sugerencia. */
   onIrAlTexto?: IrAlTexto;
@@ -364,7 +367,7 @@ export function RedaccionSugerida({
   useEffect(() => {
     if (!revisionId || revisionId === ultimaRevision.current) return;
     ultimaRevision.current = revisionId;
-    if (iaDisponible && iaAutorizada && textoRevisado.trim().length >= 50)
+    if (revisionConIA && iaDisponible && iaAutorizada && textoRevisado.trim().length >= 50)
       void pedirIA(textoRevisado);
     // pedirIA usa los pendientes de esta misma revisión.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -409,8 +412,8 @@ export function RedaccionSugerida({
             !ia &&
             !cargando && (
               <p className="redaccion-motivo">
-                Al presionar «Revisar ahora», la IA también revisa la ortografía, la redacción y si
-                el texto es una tutela de salud.
+                Al presionar «Revisión con IA», la IA también revisa la ortografía, la redacción y
+                si el texto es una tutela de salud.
               </p>
             )
           ) : (
@@ -565,8 +568,8 @@ export function RedaccionSugerida({
           <h4>Partes que le faltan a tu tutela</h4>
           {!res ? (
             <p className="redaccion-motivo">
-              Presiona «Revisar ahora» y aquí te proponemos el texto de las partes que falten
-              (juramento, pretensiones, notificaciones…).
+              Presiona «Revisión con IA» o «Revisión gratuita» y aquí te proponemos el texto de las
+              partes que falten (juramento, pretensiones, notificaciones…).
             </p>
           ) : plantillas.length === 0 ? (
             <p className="redaccion-motivo">

@@ -17,6 +17,7 @@ import {
   HelpCircle,
   Info,
   Loader2,
+  Lock,
   Paperclip,
   PenLine,
   RotateCcw,
@@ -512,6 +513,19 @@ export function RevisionWeb({
   // Growth loop: saldo de revisiones con IA y enlace de invitación de esta cuenta.
   const [cuenta, setCuenta] = useState<EstadoCuenta | null>(null);
   const [sinSaldo, setSinSaldo] = useState(false);
+  // ¿Se puede pedir la revisión con IA? Si no, el motivo se muestra bajo el botón bloqueado.
+  const motivoSinIA = !iaDisponible
+    ? "La revisión con IA no está disponible en este momento. La gratuita funciona igual."
+    : !usarIA
+      ? "Para usarla, primero autoriza el uso de IA (una sola vez)."
+      : cuenta?.ilimitado
+        ? ""
+        : sinSaldo
+          ? "No te quedan revisiones con IA. Comparte tu enlace para ganar más; la gratuita es ilimitada."
+          : "";
+  const puedeIA = motivoSinIA === "";
+  // Modo de la última revisión: la redacción con IA solo se pide sola tras una revisión con IA.
+  const [ultimaConIA, setUltimaConIA] = useState(false);
 
   // Saldo y enlace de invitación. La primera llamada crea la cuenta y registra quién invitó.
   useEffect(() => {
@@ -656,8 +670,13 @@ export function RevisionWeb({
   };
 
   /** Revisa la tutela y lleva a la página del resultado. */
-  const revisar = async (deTodosModos = false) => {
+  const revisar = async ({
+    conIA = puedeIA,
+    deTodosModos = false,
+  }: { conIA?: boolean; deTodosModos?: boolean } = {}) => {
     if (cargando) return;
+    const usarIAAhora = conIA && puedeIA;
+    setUltimaConIA(usarIAAhora);
     const limpio = texto.trim();
     const problema = problemaDelTexto(limpio);
     if (problema) {
@@ -682,7 +701,7 @@ export function RevisionWeb({
     setTemaRevisado(temaLocal);
     setTemaIA(null);
     let resultado: ResultadoPublico;
-    if (usarIA && iaDisponible) {
+    if (usarIAAhora) {
       setCargando(true);
       try {
         resultado = await revisarConIA({
@@ -772,20 +791,31 @@ export function RevisionWeb({
       reciente está ocupado, probamos automáticamente con el siguiente. Puede tardar unos segundos.
     </p>
   );
-  const botonRevisar = (etiqueta: string) => (
-    <Button
-      variant="review"
-      onClick={() => void revisar()}
-      disabled={cargando}
-      aria-busy={cargando}
-    >
-      {cargando ? (
-        <Loader2 aria-hidden="true" className="animate-spin" />
-      ) : (
-        <Search aria-hidden="true" />
-      )}{" "}
-      {cargando ? "Analizando con IA…" : etiqueta}
-    </Button>
+  // Dos caminos al revisar: con IA (gasta una revisión del saldo) o gratuita (solo reglas, en el
+  // navegador). El botón de IA se ve bloqueado, con el motivo, cuando no se puede usar.
+  const idMotivoIA = `${idTexto}-motivo-ia`;
+  const botonesRevisar = (
+    <>
+      <Button
+        variant="review"
+        onClick={() => void revisar({ conIA: true })}
+        disabled={cargando || !puedeIA}
+        aria-busy={cargando}
+        aria-describedby={motivoSinIA ? idMotivoIA : undefined}
+      >
+        {cargando ? (
+          <Loader2 aria-hidden="true" className="animate-spin" />
+        ) : puedeIA ? (
+          <Sparkles aria-hidden="true" />
+        ) : (
+          <Lock aria-hidden="true" />
+        )}{" "}
+        {cargando ? "Analizando con IA…" : "Revisión con IA"}
+      </Button>
+      <Button variant="outline" onClick={() => void revisar({ conIA: false })} disabled={cargando}>
+        <Search aria-hidden="true" /> Revisión gratuita
+      </Button>
+    </>
   );
 
   return (
@@ -799,8 +829,8 @@ export function RevisionWeb({
         </h1>
         <p className="revision-web-intro">
           Sube el PDF o pega el texto de tu tutela. Mientras escribes te señalamos errores de
-          ortografía y de tono. Cuando esté lista, presiona «Revisar ahora» y en la siguiente página
-          verás qué cumple y qué falta.
+          ortografía y de tono. Cuando esté lista, presiona «Revisión con IA» o «Revisión gratuita»
+          y en la siguiente página verás qué cumple y qué falta.
         </p>
         {continuando && (
           <p className="revision-web-continuando" role="status">
@@ -883,6 +913,7 @@ export function RevisionWeb({
             diccionarioCargando={diccionario.cargando}
             temaLocal={temaLocal}
             revisionId={revisionId}
+            revisionConIA={ultimaConIA}
             iaDisponible={redaccionIA.disponible && proveedorIA !== null}
             iaAutorizada={usarIA}
             onTemaIA={setTemaIA}
@@ -917,15 +948,24 @@ export function RevisionWeb({
               Por eso no le ponemos puntaje: las reglas están hechas para acciones de tutela por
               servicios de salud. Si de verdad es tu tutela, puedes revisarla de todos modos.
             </p>
-            <Button variant="outline" size="sm" onClick={() => void revisar(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void revisar({ conIA: ultimaConIA, deTodosModos: true })}
+            >
               Revisarla de todos modos
             </Button>
           </div>
         )}
 
         {indicadorCargando}
+        {motivoSinIA && (
+          <p id={idMotivoIA} className="revision-web-motivo-ia">
+            <Lock aria-hidden="true" /> {motivoSinIA}
+          </p>
+        )}
         <div className="revision-web-acciones">
-          {botonRevisar(res ? "Revisar de nuevo" : "Revisar ahora")}
+          {botonesRevisar}
           {res && (
             <Button variant="outline" onClick={() => irA("resultado")}>
               Ver el último resultado
@@ -1046,7 +1086,20 @@ export function RevisionWeb({
         />
         {indicadorCargando}
         <div className="revision-web-acciones">
-          {botonRevisar("Actualizar la revisión")}
+          {/* Repite la revisión en el mismo modo que la última (con IA o gratuita). */}
+          <Button
+            variant="review"
+            onClick={() => void revisar({ conIA: ultimaConIA })}
+            disabled={cargando}
+            aria-busy={cargando}
+          >
+            {cargando ? (
+              <Loader2 aria-hidden="true" className="animate-spin" />
+            ) : (
+              <Search aria-hidden="true" />
+            )}{" "}
+            {cargando ? "Analizando con IA…" : "Actualizar la revisión"}
+          </Button>
           <Button variant="ghost" onClick={() => irA("resultado")}>
             <ArrowLeft aria-hidden="true" /> Volver al resultado
           </Button>

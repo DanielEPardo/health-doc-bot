@@ -20,6 +20,8 @@ export interface EstadoCuenta {
   invitados: number;
   /** De esas, cuántas completaron su primera revisión (las que dieron créditos). */
   invitadosActivados: number;
+  /** Administrador (ADMIN_CLERK_USER_IDS): revisiones con IA sin límite. */
+  ilimitado?: boolean;
 }
 
 export interface MetricasLoop {

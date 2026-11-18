@@ -6,6 +6,13 @@ import { RevisionWeb } from "@/components/revision-web";
 import { crearPDF } from "./pdf-ayuda";
 
 describe("Revisión en la web", () => {
+  it("sin IA disponible, «Revisión con IA» se ve bloqueada con el motivo y la gratuita funciona", () => {
+    render(<RevisionWeb />);
+    const conIA = screen.getByRole("button", { name: /Revisión con IA/ });
+    expect(conIA).toBeDisabled();
+    expect(conIA).toHaveAccessibleDescription(/no está disponible/);
+    expect(screen.getByRole("button", { name: /Revisión gratuita/ })).toBeEnabled();
+  });
   it("revisar lleva a la página del resultado y se puede volver al texto", () => {
     render(<RevisionWeb />);
     const caja = screen.getByLabelText("Texto de tu tutela") as HTMLTextAreaElement;
@@ -18,7 +25,7 @@ describe("Revisión en la web", () => {
       },
     });
     expect(screen.getByRole("heading", { level: 1, name: /Tu tutela/ })).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    fireEvent.click(screen.getByRole("button", { name: /revisión gratuita/i }));
     // El texto queda en su página (oculta) y el resultado en otra.
     expect(caja).not.toBeVisible();
     expect(screen.getByRole("heading", { level: 1, name: /Resultado/ })).toBeVisible();
@@ -42,7 +49,7 @@ describe("Revisión en la web", () => {
           "Señor rector, solicito respetuosamente que se revise la nota de mi examen de matemáticas porque considero que tengo derecho a una segunda calificación. El profesor no explicó los temas y la cita que pedí con coordinación nunca me la dieron. Le pido que ordene repetir la evaluación. También pido que me entreguen las notas del semestre pasado.",
       },
     });
-    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    fireEvent.click(screen.getByRole("button", { name: /revisión gratuita/i }));
     expect(screen.getByRole("heading", { name: /no parece una tutela de salud/ })).toBeVisible();
     expect(caja).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /Revisarla de todos modos/ }));
@@ -51,7 +58,7 @@ describe("Revisión en la web", () => {
 
   it("pide un texto mínimo antes de revisar", () => {
     render(<RevisionWeb />);
-    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    fireEvent.click(screen.getByRole("button", { name: /revisión gratuita/i }));
     expect(screen.getByRole("alert")).toHaveTextContent(/Aún no has pegado/);
   });
   it("muestra el dictamen y lo que falta de una tutela incompleta", () => {
@@ -61,7 +68,7 @@ describe("Revisión en la web", () => {
       "utf8",
     );
     fireEvent.change(screen.getByLabelText("Texto de tu tutela"), { target: { value: texto } });
-    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    fireEvent.click(screen.getByRole("button", { name: /revisión gratuita/i }));
     expect(
       screen.getByRole("heading", { name: /le faltan elementos esenciales/i }),
     ).toBeInTheDocument();
@@ -106,7 +113,7 @@ describe("Revisión en la web — documentos y PDF", () => {
     fireEvent.change(screen.getByLabelText("Texto de tu tutela"), {
       target: { value: leer("tutela-completa.txt") },
     });
-    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    fireEvent.click(screen.getByRole("button", { name: /revisión gratuita/i }));
     // Página del resultado → página (opcional) de los documentos.
     fireEvent.click(
       screen.getByRole("button", { name: /Responder preguntas sobre mis documentos/ }),
@@ -162,7 +169,7 @@ describe("Cuestionario de documentos — respuestas", () => {
         ),
       },
     });
-    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    fireEvent.click(screen.getByRole("button", { name: /revisión gratuita/i }));
     fireEvent.click(
       screen.getByRole("button", { name: /Responder preguntas sobre mis documentos/ }),
     );
@@ -191,7 +198,7 @@ describe("Redacción sugerida (panel al lado del texto)", () => {
         ),
       },
     });
-    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    fireEvent.click(screen.getByRole("button", { name: /revisión gratuita/i }));
     // Del resultado se vuelve a la página del texto, donde están las partes propuestas.
     fireEvent.click(screen.getByRole("button", { name: /Corregir mi texto/ }));
     const panel = screen.getByRole("complementary", { name: "Redacción sugerida" });

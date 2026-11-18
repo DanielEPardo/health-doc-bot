@@ -297,6 +297,9 @@ h1,h2,h3 { font-weight:600; line-height:1.2; letter-spacing:0; }
 .revision-web-texto { min-height:260px; font-size:17px; line-height:1.55; background:var(--background); }
 .revision-web-ayuda { font-size:15px; color:var(--muted-foreground); margin-top:8px; }
 .revision-web-aviso { margin-top:12px; color:var(--destructive); font-weight:600; }
+.revision-web-acciones button:disabled:not([aria-busy="true"]) { background:var(--muted); color:var(--muted-foreground); border-color:var(--border); opacity:1; }
+.revision-web-motivo-ia { display:flex; gap:8px; align-items:flex-start; margin-top:16px; font-size:15px; color:var(--muted-foreground); }
+.revision-web-motivo-ia svg { flex-shrink:0; width:16px; height:16px; margin-top:3px; }
 .revision-web-acciones { display:flex; flex-wrap:wrap; gap:12px; margin-top:20px; }
 .revision-web-resultado:focus { outline:none; }
 .resultado { margin-top:36px; }

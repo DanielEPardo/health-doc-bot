@@ -48,7 +48,7 @@ describe("Historial desde la revisión web", () => {
     expect(guardarTutela.mock.calls[0]?.[0].data).toMatchObject({ id: null, resultado: null });
     expect(await screen.findByText(/Guardada en tu historial/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /revisar ahora/i }));
+    fireEvent.click(screen.getByRole("button", { name: /revisión gratuita/i }));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2500);
     });
